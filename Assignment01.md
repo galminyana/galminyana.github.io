@@ -265,14 +265,22 @@ Let's try the code compiling and linking it. Commands are:
 SLAE64> nasm -f elf64 BindShell-ExecveStack.nasm -o BindShell-ExecveStack.o
 SLAE64> ld -N BindShell-ExecveStack.o -o BindShell-ExecveStack
 ```
-![Compile_And_Link](/img/A01_BindShell-Execve-Stack_Compile.png)
+<img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Compile.png" width="75%" height="75%">
 
-_The **-N** option in the linker is needed, as the code access to memory positions in the `.text` section (code) instead `.data` section._
+> The **-N** option in the linker is needed, as the code access to memory positions in the `.text` section (code) instead `.data` section.
+
+Time to test. Program is executed and using `netcat` a conection is made. The `"Passwd: "` prompt appears asking for the password:
+
+<img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Exec01.png" width="75%" height="75%">
+
+With the right password, the shell is launched and working:
+
+<img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Exec02.png" width="75%" height="75%">
+
+If the password is incorrect, program will exit with a Segmentation Fault:
+
+<img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Exec03.png" width="75%" height="75%">
 
 
 
-
-
- 
- 
  
