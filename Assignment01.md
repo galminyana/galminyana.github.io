@@ -458,11 +458,11 @@ The shellcode can be executed, and using `nectat` a connection is opened to the 
 
 ## GitHub Repo Files
 
-In the [GitHub Repo](https://github.com/galminyana/SLAE64/Assignment01/) for this assignment contains the following files:
+In the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01) for this assignment contains the following files:
 
-- [BindShell-ExecveStack.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-ExecveStack.nasm) : This is the ASM source code for the first version of the code. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
-- [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
-- [shellcode.c](https://github.com/galminyana/SLAE64/Assignment01/shellcode.c) : The C template with the V2 of the shellcode to run and execute
+- [BindShell-ExecveStack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack.nasm) : This is the ASM source code for the first version of the code. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
+- [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
+- [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment01/shellcode.c) : The C template with the V2 of the shellcode to run and execute
 
 ## The End
 
