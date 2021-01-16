@@ -24,8 +24,11 @@ Below are the links to the posts containing the certification assignments.
 #### Assignment 06
 
 #### Assignment 07
- -[Custom Crypter. PoC](Assignment07)
+ - [Custom Crypter. PoC](Assignment07)
 
+### GitHub Repo
+
+All the code for this posts, is hosted in [GitHub](https://github.com/galminyana/SLAE64/).
 
 ### Licensing
 
