@@ -167,3 +167,23 @@ syscall
 This is the easiest part. Simply the "3" value is put into RAX for the syscall number of `close()`, and RDI already has the value of the socket descriptor to close.
 
 #### Duplicate Socket Descriptors
+
+```asm
+; Sockets duplication
+mov rdi, rbx			    ; Client socket descriptor
+mov rax, 33           ; syscall number
+mov rsi, 0
+syscall
+mov rax, 33
+mov rsi, 1
+syscall
+mov rax, 33
+mov rsi, 2
+syscall
+```
+Using `dup2()`, `stdin`, `stdout`, and `stderr` are duplicated to the socket descriptor. One call to `dup2()` for each.
+Registers get the following values for the parameters:
+-	RAX <- 33 : Syscall number
+-	RDI <- new file descriptor : Is the client socket id
+-	RSI <- old file descriptor : Will be one call for STDIN, STDOUT, STDERR.
+
