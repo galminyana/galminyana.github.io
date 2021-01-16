@@ -2,22 +2,22 @@
 
 This pages have been created for completing the requirements of the [SecurityTube Linux Assembly Expert Certification](http://www.securitytube-training.com/online-courses/x8664-assembly-and-shellcoding-on-linux/).
 
-## Licensing
+### Licensing
 
 All content of this pages is under the [GNU Free Documentation License](https://www.gnu.org/licenses/fdl-1.3.html) v1.3 or later.
 
 All content under the [GitHub Repo](https://github.com/galminyana/SLAE64/) is under the [GNU General Public License](https://www.gnu.org/licenses/gpl-3.0.html) v3 or later.
 
-## Contents
+### Contents
 
-#### - Assignment#1 
+#### Assignment #1 
 
  - [Create Shell_Bind_TCP Shellcode](Assignment01)
 
-#### - Assignment#2
+#### Assignment #2
  - [Assignment #2: Create Reverse_Shell_TCP Shellcode](Assignment02)
  
--### Assignment#3
+-### Assignment #3
 
 - [Assig
 
