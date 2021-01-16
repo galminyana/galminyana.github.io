@@ -31,14 +31,11 @@ Below are the links to the posts containing the certification assignments.
 All the code for this posts, is hosted in [GitHub](https://github.com/galminyana/SLAE64/).
 
 ### Licensing
-
-All content of this pages is under the [GNU Free Documentation License](https://www.gnu.org/licenses/fdl-1.3.html) v1.3 or later.
-
-All content under the [GitHub Repo](https://github.com/galminyana/SLAE64/) is under the [GNU General Public License](https://www.gnu.org/licenses/gpl-3.0.html) v3 or later.
+All the content is under the following Licenses:
+- The content of the posts is under the [GNU Free Documentation License](https://www.gnu.org/licenses/fdl-1.3.html) v1.3 or later.
+- All the code in the [GitHub Repo](https://github.com/galminyana/SLAE64/) is under the [GNU General Public License](https://www.gnu.org/licenses/gpl-3.0.html) v3 or later.
 
 ### About
 
-T
-```markdown
-Syntax highlighted code block
+This page and the GitHub repo have been done by Guillem Alminyana (Student ID: PA-14628)
 
