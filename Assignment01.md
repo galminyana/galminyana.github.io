@@ -157,7 +157,7 @@ Registers get this values for the parametrers:
 
 This call returns a socket descriptor for the client, that is stored in R9 for future use.
 
-#### Close the Parent socket Descriptor
+#### Close the Parent Socket Descriptor
 
 ```asm
 ; Close the parent socket_id
