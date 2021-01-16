@@ -158,3 +158,12 @@ Registers get this values for the parametrers:
 This call returns a socket descriptor for the client, that is stored in R9 for future use.
 
 #### Close the Parent socket Descriptor
+
+```asm
+; Close the parent socket_id
+mov rax, 3                  ; syscall number
+syscall
+```
+This is the easiest part. Simply the "3" value is put into RAX for the syscall number of `close()`, and RDI already has the value of the socket descriptor to close.
+
+#### Duplicate Socket Descriptors
