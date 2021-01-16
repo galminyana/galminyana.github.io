@@ -23,4 +23,18 @@ In case the password is not correct, the shellcode will exit with a Segmentation
 
 For Linux Sockets Programming, the following System calls are required on this assignment: 
 
-gith
+```c
+int socket(int domain, int type, int protocol); 
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen); 
+int listen(int sockfd, int backlog); 
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen); 
+int close(int sockfd); 
+```
+To duplicate the standard input, output and error, dup2() call will be used: 
+
+```c
+int dup2(int oldfd, int newfd); 
+
+The dup2() system call performs the same task as dup(), but instead of using the lowest-numbered unused file descriptor,  it uses the file descriptor number specified in newfd.  If the file descriptor newfd was previously open, it is silently closed before being reused.  
+```
+
