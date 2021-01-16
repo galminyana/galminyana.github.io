@@ -122,24 +122,26 @@ Values in the registers for the `listen` call parameters are:
 #### Accept Incoming Connections
 
 ```asm
-; client_sock = accept(sock_id, (struct sockaddr *)&client, &sockaddr_len) 
+; client_sock = accept(sock_id, 
+;                     (struct sockaddr *)&client, 
+;                      &sockaddr_len) 
 ;       RDI already has the sock_id 
 
-mov rax, 43                     ; syscall number 
+mov rax, 43                 ; syscall number 
 
 ; Reserve space on the stack for the struct (16 bytes) 
-sub rsp, 16                     ; Reserved 16 bytes 
-mov rsi, rsp                    ; RSI <- @ sockaddr struct 
+sub rsp, 16                 ; Reserved 16 bytes 
+mov rsi, rsp                ; RSI <- @ sockaddr struct 
  
 ; Store in the Stack the sockaddr_len value 
-mov byte [rsp - 1], 16          ; Stored the len (16 bytes) 
+mov byte [rsp - 1], 16      ; Stored the len (16 bytes) 
 
-sub rsp, 1                      ; Update value for RSP 
-mov rdx, rsp                    ; RDX <- @sockaddr_len 
+sub rsp, 1                  ; Update value for RSP 
+mov rdx, rsp                ; RDX <- @sockaddr_len 
 syscall 
 
 ; Store the client socket descripion returned by accept 
-mov rbx, rax                     ; r9 <- client_sock 
+mov rbx, rax                 ; r9 <- client_sock 
 ```
 `accept()`requires the following parameters:
 
