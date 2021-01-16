@@ -10,7 +10,7 @@ All content under the [GitHub Repo](https://github.com/galminyana/SLAE64/) is un
 
 ## Index
 
-- [Assignment #1: Create Shell_Bind_TCP Shellcode](./Assignment01.html)
+- [Assignment #1: Create Shell_Bind_TCP Shellcode](Assignment01)
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
