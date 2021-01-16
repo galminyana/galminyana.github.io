@@ -257,7 +257,7 @@ execve_syscall:
 
 #### Putting All Together: The ASM File
 
-The full code is in the file [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack.nasm).
+The full code can be found in the [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
 
 
