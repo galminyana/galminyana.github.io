@@ -11,7 +11,7 @@ Requirements for this assignment are to create a Shell_Bind_TCP shellcode that:
   3. If the password is correct, then Exec Shell is executed 
   4. Also, the NULL bytes (0x00) must be removed from the shellcode 
 
-To build the shellcode use of the linux sockets is needed. Reading documentation, the following steps are needed: 
+To build the shellcode use of the linux sockets is needed. Reading documentation, the following steps are required: 
 
   1. Create a socket 
   2. Bind the socket to a port 
