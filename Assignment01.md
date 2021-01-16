@@ -224,7 +224,7 @@ The last part of this section, is to compare the typed password from the user wi
 
 #### The Shell: Execve
 
-Code used is the standard from Execve-Stack. In this code, the `/bin//sh` string is stored in the Stack and accessed via the Stack Technique:
+Code used is the standard from Execve-Stack. In this code, the `/bin//sh` string parameter and the length of the string are stored in the Stack and accessed via the Stack Technique:
 
 ```asm
 execve_syscall:
@@ -254,6 +254,11 @@ execve_syscall:
         add rax, 59
         syscall
 ```
+
+#### Putting All Together: The ASM File
+
+The full code is in the file [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack.nasm).
+
 
 
  
