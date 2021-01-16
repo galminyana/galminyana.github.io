@@ -1,4 +1,4 @@
-## Assignment #1: Bind_Shell_TCP
+## Assignment #2: Shell_Reverse_TCP
 ---
 ---
 ### Introduction
