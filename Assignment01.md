@@ -281,7 +281,7 @@ If the password is incorrect, program will exit with a Segmentation Fault:
 
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Exec03.png" width="75%" height="75%">
 
-## Remove NULLs and Reduce Shellcode Size
+### Remove NULLs and Reduce Shellcode Size
 ---
 
 > The final ASM code after the changes explained here can be found at the [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
@@ -408,8 +408,8 @@ This shellcode could be more reduced:
 - Removing the code for the `"Passwd: "` prompt: Why needed? We already know that a password has to be typed in
 But won't do it as the reached size for the shellcode is good enought with 155 bytes
 
-## Executing Final Shellcode
-
+### Executing Final Shellcode
+---
 To test the shellcode, the `shellcode.c` template is used:
 ```c
 #include <stdio.h>
@@ -456,16 +456,16 @@ The shellcode can be executed, and using `nectat` a connection is opened to the 
 
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_V2_Exec01.png" width="75%" height="75%">
 
-## GitHub Repo Files
-
+### GitHub Repo Files
+---
 In the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01) for this assignment contains the following files:
 
 - [BindShell-ExecveStack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack.nasm) : This is the ASM source code for the first version of the code. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
 - [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
 - [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment01/shellcode.c) : The C template with the V2 of the shellcode to run and execute
 
-## The End
-
+### The End
+---
 This pages have been created for completing the requirements of the SecurityTube Linux Assembly Expert certification: http://www.securitytube-training.com/online-courses/x8664-assembly-and-shellcoding-on-linux/index.html
 
 Student ID: PA-14628
