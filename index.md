@@ -1,10 +1,9 @@
-## SLAE64
+## SLAE64 Assignments
 
-This pages have been created for completing the requirements of the [SecurityTube Linux Assembly Expert Certification]. (http://www.securitytube-training.com/online-courses/x8664-assembly-and-shellcoding-on-linux/)
+This pages have been created for completing the requirements of the [SecurityTube Linux Assembly Expert Certification](http://www.securitytube-training.com/online-courses/x8664-assembly-and-shellcoding-on-linux/).
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
 
-### Markdown
+# Markdown
 
 Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
 
