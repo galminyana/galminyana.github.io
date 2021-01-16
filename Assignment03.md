@@ -35,15 +35,15 @@ Some considerations to have in mind:
 ```c
 int access (const char * pathname, int mode); 
 ```
-- Memory positions are agrupated into pages. This makes our search in memory with the `access()` syscall shorter, as if the syscall tries to access a position of memory not allocated, the whole page where this memory position belongs to won’t be accesible. Hence, we only need to really check one memory position for each page.  
+- Memory positions are agrupated into pages. This makes the search in memory with the `access()` syscall shorter, as if the syscall tries to access a position of memory not allocated, the whole page where this memory position belongs to, won’t be accesible. Hence, only is needed to check one memory position for each memory page.  
 
 - To reduce false positives in the “egg” search, “egg” needs to be repeated twice. For example, a false positive could be the Egg Hunter shellcode finding itself as contains the “egg”. For that, a 4 bytes “egg” used twice is used.
 
 All this said, the Egg Hunter Shellcode has to do the following: 
 - Check memory pages if they are accesible 
-- If the memory page is accessible, then search on each memory posiion of that page for the “egg”.  
+- If the memory page is accessible, then search on each memory position of that page for the “egg” 
 - If the egg is found in memory, check next memory position if also has the egg (egg is 2 consecutive memory positions) 
-- If both eggs found, then jump to execute the shellcode that will be after the teo eggs 
+- If both eggs found, then jump to execute the shellcode that will be after the two eggs 
 
 The summarized pseudocode will be: 
 ```markdown
