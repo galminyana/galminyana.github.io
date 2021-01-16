@@ -259,6 +259,18 @@ execve_syscall:
 
 The full code can be found in the [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
+Let's try the code compiling and linking it. Commands are:
+
+```markdown
+SLAE64> nasm -f elf64 BindShell-ExecveStack.nasm -o BindShell-ExecveStack.o
+SLAE64> ld -N BindShell-ExecveStack.o -o BindShell-ExecveStack
+```
+![Compile_And_Link](/img/A01_BindShell-Execve-Stack_Compile.png)
+
+_The **-N** option in the linker is needed, as the code access to memory positions in the `.text` section (code) instead `.data` section._
+
+
+
 
 
  
