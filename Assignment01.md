@@ -50,7 +50,7 @@ int execve(const char *filename,
 
 Will explain how we implement each step mentioned before into ASM, with the idea to make the code easy to understand. No enphasys has been put into removing NULLs and make the shellcode small (this is done later).
 
-1. **Create a Socket**
+#### Create a Socket
 
 ```asm
 ; sock = socket(AF_INET, SOCK_STREAM, 0) 
@@ -72,7 +72,8 @@ To execute the sys_socket system call the arguments will have to be placed in th
 
 The syscall will return a file descriptor in RAX that is saved into RDI. This saves the socket_id for later use in the code
 
-2. **Bind the Created Socket to a Port**
+#### Bind the Created Socket to a Port
+
 ```asm
 ; Prepare (struct sockaddr *)&server 
 ;       RSP will point to the struct address 
@@ -102,7 +103,7 @@ This part irequires two steps:
  - RSI: Address of the struct. This value is in RSP
  - RDX: The lengh of the sockaddr struct. It's 16 bytes
 
-### Listen for Incoming Connections
+#### Listen for Incoming Connections
 
 
 
