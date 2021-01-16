@@ -10,17 +10,24 @@ All content under the [GitHub Repo](https://github.com/galminyana/SLAE64/) is un
 
 ### Contents
 
-#### Assignment #1 
-
+#### Assignment 01 
  - [Create Shell_Bind_TCP Shellcode](Assignment01)
 
-#### Assignment #2
- - [Assignment #2: Create Reverse_Shell_TCP Shellcode](Assignment02)
+#### Assignment 02
+ - [Create Reverse_Shell_TCP Shellcode](Assignment02)
  
--### Assignment #3
+#### Assignment 03
+ - [Egg Hunter Research and Implementation](Assignment03)
 
-- [Assig
+#### Assignment 04
+ - [Custom Encoding Scheme. PoC](Assignment04)
 
+#### Assignment 05
+
+#### Assignment 06
+
+#### Assignment 07
+ -[Custom Crypter. PoC](Assignment07)
 
 ```markdown
 Syntax highlighted code block
