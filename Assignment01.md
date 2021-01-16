@@ -121,7 +121,38 @@ Values in the registers for the `listen` call parameters are:
 
 #### Accept Incoming Connections
 
+```asm
+; client_sock = accept(sock_id, (struct sockaddr *)&client, &sockaddr_len) 
+;       RDI already has the sock_id 
 
+mov rax, 43                     ; syscall number 
 
+; Reserve space on the stack for the struct (16 bytes) 
+sub rsp, 16                     ; Reserved 16 bytes 
+mov rsi, rsp                    ; RSI <- @ sockaddr struct 
+ 
+; Store in the Stack the sockaddr_len value 
+mov byte [rsp - 1], 16          ; Stored the len (16 bytes) 
 
+sub rsp, 1                      ; Update value for RSP 
+mov rdx, rsp                    ; RDX <- @sockaddr_len 
+syscall 
 
+; Store the client socket descripion returned by accept 
+mov rbx, rax                     ; r9 <- client_sock 
+```
+`accept()`requires the following parameters:
+
+- Socket descriptor, that's already stored in RDI
+- Address of the struct by reference. Stack is used to store this struct reserving 16 bytes in stack. The data of this struct will be modified by the syscall and will access throught RSP register
+- Address where the length of the struct is stored. This value is stored in the stack. RSP has this value
+
+Registers get this following values for the parametrers:
+- RAX <- 43 : Syscall Number 
+- RDI : Already stores the socket descriptor 
+- RSI <- RSP : Address of stack where struct is 
+- RDX <- RSP+1 : Address of stack where the length of the struct is. Just one position more tan the struct itself 
+
+This call returns a socket descriptor for the client, that is stored in R9 for future use.
+
+#### Close the Parent socket Descriptor
