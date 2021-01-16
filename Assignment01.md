@@ -56,13 +56,13 @@ Will explain how we implement each step mentioned before into ASM, with the idea
 
 ```asm
 ; sock = socket(AF_INET, SOCK_STREAM, 0) 
-mov rax, 41                     ; syscall number 
-mov rdi, AF_INET                ; IPv4 
-mov rsi, SOCK_STREAM            ; TCP connection 
-mov rdx, 0                      ; IP Protocol 
+mov rax, 41                 ; syscall number 
+mov rdi, AF_INET            ; IPv4 
+mov rsi, SOCK_STREAM        ; TCP connection 
+mov rdx, 0                  ; IP Protocol 
 syscall 
 ; Save the socket_id value in RDI for future use 
-mov rdi, rax                    ; value returned in RAX by syscall  
+mov rdi, rax                ; value returned in RAX by syscall  
 ```
 This is the first step required for sockets, open the socket. 
 To execute the sys_socket system call the arguments will have to be placed in the corresponding registers: 
@@ -80,18 +80,18 @@ The syscall will return a file descriptor in RAX that is saved into RDI. This sa
 ; Prepare (struct sockaddr *)&server 
 ;       RSP will point to the struct address 
 xor rax, rax 
-push rax                        ; bzero(&server.sin_zero, 8) 
+push rax                    ; bzero(&server.sin_zero, 8) 
 
 mov dword [rsp - 4], INADDR_ANY 
 mov word [rsp - 6], PORT 
 mov word [rsp - 8], AF_INET 
-sub rsp, 8                      ; Update RSP with right value 
+sub rsp, 8                  ; Update RSP with right value 
 
 ; bind(sock, (struct sockaddr *)&server, sockaddr_len) 
 ;       RDI already has the sock_id 
-mov rax, 49                     ; syscall number 
-mov rsi, rsp                    ; @ to (struct sockaddr * &server) 
-mov rdx, 16                     ; length of the sockaddr struct 
+mov rax, 49                 ; syscall number 
+mov rsi, rsp                ; @ to (struct sockaddr * &server) 
+mov rdx, 16                 ; length of the sockaddr struct 
 syscall  
 ```
 This part irequires two steps:
@@ -107,9 +107,19 @@ This part irequires two steps:
 
 #### Listen for Incoming Connections
 
+```asm
+; listen(sock, MAX_CLIENTS 
+;       RDI already has the sock_id 
+mov rax, 50          ; syscall number 
+mov rsi, 2			     
+syscall 
+```
+Values in the registers for the `listen` call parameters are:
+- RAX <- 50 : Syscall Number 
+- RDI : Already stores the socket descriptor 
+- RSI <- 2 : Is the backlog parameter 
 
-
-
+#### Accept Incoming Connections
 
 
 
