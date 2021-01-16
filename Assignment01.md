@@ -149,7 +149,7 @@ mov rbx, rax                 ; r9 <- client_sock
 - Address of the struct by reference. Stack is used to store this struct reserving 16 bytes in stack. The data of this struct will be modified by the syscall and will access throught RSP register
 - Address where the length of the struct is stored. This value is stored in the stack. RSP has this value
 
-Registers get this following values for the parametrers:
+Registers get this values for the parametrers:
 - RAX <- 43 : Syscall Number 
 - RDI : Already stores the socket descriptor 
 - RSI <- RSP : Address of stack where struct is 
