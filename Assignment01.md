@@ -6,20 +6,20 @@
 
 Requirements for this assignment are to create a Shell_Bind_TCP shellcode that: 
 
- 1. Listens on a specific port 
- 2. Requires a password 
- 3. If the password is correct, then Exec Shell is executed 
- 4. Also, the NULL bytes (0x00) must be removed from the shellcode 
+  1. Listens on a specific port 
+  2. Requires a password 
+  3. If the password is correct, then Exec Shell is executed 
+  4. Also, the NULL bytes (0x00) must be removed from the shellcode 
 
 To build the shellcode, we is required the use of the linux sockets and do the following steps: 
 
- 1. Create a socket 
- 2. Bind the socket to a port 
- 3. Start listenning for connections 
- 4. Accept incoming connections 
- 5. Ask, read, and validate the password 
- 6. Duplicate `SDTIN`, `STDOUT` and `STDERR` to the socket descriptor 
- 7. Execute /bin/sh for the incoming and validated conection 
+  1. Create a socket 
+  2. Bind the socket to a port 
+  3. Start listenning for connections 
+  4. Accept incoming connections 
+  5. Ask, read, and validate the password 
+  6. Duplicate `SDTIN`, `STDOUT` and `STDERR` to the socket descriptor 
+  7. Execute /bin/sh for the incoming and validated conection 
 
 In case the password is not correct, the shellcode will exit with a Segmentation Fault. The shellcode won’t care on how the program terminates. This makes sense as shellcode will be smaller in size and really does not matter how it exits. 
 
@@ -67,10 +67,10 @@ mov rdi, rax                ; value returned in RAX by syscall
 This is the first step required for sockets, open the socket. 
 To execute the sys_socket system call the arguments will have to be placed in the corresponding registers: 
 
- - RAX <- 41 : Syscall number. 
- - RDI <- 2 : Domain parameter. AF_INET is for IPv4. 
- - RSI <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
- - RDX <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
+  - RAX <- 41 : Syscall number. 
+  - RDI <- 2 : Domain parameter. AF_INET is for IPv4. 
+  - RSI <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
+  - RDX <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
 
 The syscall will return a file descriptor in RAX that is saved into RDI. This saves the socket_id for later use in the code
 
@@ -96,14 +96,14 @@ syscall
 ```
 This part irequires two steps:
 
-- Create the `struct sockaddr` structure. Stack is used to store the values of the struct:
- - Values are placed on the stack
- - Stack Pointer (RSP) is updated with the new address
-- Call the `bind` syscall. Values for parameters are placed into the registers:
- - RAX: Syscall number (49)
- - RDI: Socket descriptor. Already has the value from previous point
- - RSI: Address of the struct. This value is in RSP
- - RDX: The lengh of the sockaddr struct. It's 16 bytes
+  - Create the `struct sockaddr` structure. Stack is used to store the values of the struct:
+    - Values are placed on the stack
+    - Stack Pointer (RSP) is updated with the new address
+  - Call the `bind` syscall. Values for parameters are placed into the registers:
+    - RAX: Syscall number (49)
+    - RDI: Socket descriptor. Already has the value from previous point
+    - RSI: Address of the struct. This value is in RSP
+    - RDX: The lengh of the sockaddr struct. It's 16 bytes
 
 #### Listen for Incoming Connections
 
@@ -115,9 +115,9 @@ mov rsi, 2
 syscall 
 ```
 Values in the registers for the `listen` call parameters are:
-- RAX <- 50 : Syscall Number 
-- RDI : Already stores the socket descriptor 
-- RSI <- 2 : Is the backlog parameter 
+  - RAX <- 50 : Syscall Number 
+  - RDI : Already stores the socket descriptor 
+  - RSI <- 2 : Is the backlog parameter 
 
 #### Accept Incoming Connections
 
