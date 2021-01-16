@@ -34,7 +34,8 @@ To duplicate the standard input, output and error, dup2() call will be used:
 
 ```c
 int dup2(int oldfd, int newfd); 
-
+```
+```markdown
 The dup2() system call performs the same task as dup(), but instead of using the lowest-numbered unused file descriptor,  it uses the file descriptor number specified in newfd.  If the file descriptor newfd was previously open, it is silently closed before being reused.  
 ```
 
