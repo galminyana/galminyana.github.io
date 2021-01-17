@@ -98,7 +98,7 @@ After this all, the Encoded shellcode will be printed in screen. This is the she
 - The string in hex of the left rotated shellcode 
 - The string in hex of ROT25 of the already rotated shellcode 
 
-The full code for the Encoder can ve found in the [Encoder.c](https://github.com/galminyana/SLAE64/blob/main/Assignment04/Encoder.c):
+The Encoder code is on [GitHub Repo](https://github.com/galminyana/SLAE64/blob/main/Assignment04/) in the [Encoder.c](https://github.com/galminyana/SLAE64/blob/main/Assignment04/Encoder.c):
 
 ```c
 #include <stdio.h>
