@@ -322,6 +322,7 @@ Desensamblado de la sección .text:
 - `mov rax, VALUE` is replaced by `push VALUE; pop rax`
 - `mov [rsp], VALUE` is replaced by `push VALUE`
 - Using 32, 16 or even 8 bits registers for operations instead the 64 bits register
+- Using CDQ instruction to ZEROing RDX. It puts RDX to 0x00 if RAX >= 0
 
 Let's replace all instructions until no NULLs are shown by `objdump` in the shellcode. Being carefull on which instructions are used, the size of the shellcode just removing the NULLs, is reduced to 172 bytes. 
 
