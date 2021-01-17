@@ -253,7 +253,7 @@ SLAE64>
 ```
 <img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Shellcode01.png" width="75%" height="75%">
 
-This shellcode could be more reduced removing the stuff to print the `"Passwd: "` prompt. The `close()` call haven't been used in this assignment.
+This shellcode could be more reduced removing the stuff to print the `"Passwd: "` prompt. The `close()` call haven't been used in this assignment. But with the reduction to **123 bytes** is good enought.
 
 ### Executing Final Shellcode
 ---
