@@ -182,12 +182,26 @@ execve_syscall:
 
 #### Putting All Together
 
+The code for this first version of the Reverse Shell, can be found in the [ReverseShell-ExecveStack](https://github.com/galminyana/SLAE64/Assignment02/ReverseShell-ExecveStack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
+Let's try the code compiling and linking it. Commands are:
 
+```markdown
+SLAE64> nasm -f elf64 ReverseShell-ExecveStack.nasm -o ReverseShell-ExecveStack.o
+SLAE64> ld -N ReverseShell-ExecveStack.o -o ReverseShell-ExecveStack
+```
+<img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Compile.png" width="75%" height="75%">
 
+> The **-N** option in the linker is needed, as the code access to memory positions in the `.text` section (code) instead `.data` section.
 
+To test, a `netcat` listener needs to be opened. Now the program can be run, and in the `netcat` listener will get the "Passwd: " prompt:
 
+<img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Exec01.png" width="75%" height="75%">
 
+Like in the previous assignment, if the password is correct, the program continues. If password is incorrect, the program ends with a Segmentation Fault.
+
+### Remove NULLs and Reduce Shellcode Size
+---
 
 
 
