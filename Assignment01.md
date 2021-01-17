@@ -53,7 +53,7 @@ int execve(const char *filename,
 Will explain how we implement each step mentioned before into ASM, with the idea to make the code easy to understand. No enphasys has been put into removing NULLs and make the shellcode small (this is done later).
 
 #### Create a Socket
-
+---
 ```asm
 ; sock = socket(AF_INET, SOCK_STREAM, 0) 
 mov rax, 41                 ; syscall number 
@@ -452,13 +452,13 @@ Now the code can be compiled with `gcc` using the `-fno-stack-protector` and `-z
 ```markdown
 gcc -fno-stack-protector -z execstack shellcode.c -o shellcode
 ```
-The shellcode can be executed, and using `nectat` a connection is opened to the victim:
+The shellcode can be executed, and using `netcat`, a connection is opened to the victim:
 
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_V2_Exec01.png" width="75%" height="75%">
 
 ### GitHub Repo Files
 ---
-In the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01) for this assignment contains the following files:
+The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01) for this assignment contains the following files:
 
 - [BindShell-ExecveStack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack.nasm) : This is the ASM source code for the first version of the code. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
 - [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
