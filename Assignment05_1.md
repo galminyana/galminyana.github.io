@@ -11,12 +11,19 @@ Below are the three samples choosen with their original code and the polymorphic
 
 ### Sample 1: `sethostname() & killall 33 bytes shellcode`
 ---
+
 > Shellcode Name: Linux/x86_64 sethostname() & killall 33 bytes shellcode
+
 > Author: zbt
+
 > Description: Changes the name of the host to "Rooted!" and then kills all processes running on the system
+
 > Original Shellcode Size: 33 bytes
+
 > Max Size of the polymorphic Version: 49 bytes
+
 > Size of the Created Polymorphic Version: **46 bytes (below the 150%)**
+
 The original code for the sample is:
 
 ```asm
