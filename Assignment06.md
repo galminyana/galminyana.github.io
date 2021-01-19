@@ -211,9 +211,13 @@ data:
     text db '127.1.1.1 google.lk'
 ```
 
-Once applied polymorphic techniques, the code changes to:
+The following techniques are applied to polymorph the code:
+1. Replace the Stack Technique used to store the `/etc/hosts` string by Relative Address Technique
+2. Replace the JMP-CALL-POP by Relative Address 
+3. Lot of `mov` instructions that can be replaced by `jmp;pop`
+4. 
 
-
+v
 
 
 
