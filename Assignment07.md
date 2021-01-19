@@ -1,4 +1,4 @@
-## Assignment #4: Custom Crypter
+## Assignment #7: Custom Crypter
 ---
 ---
 ### Introduction
@@ -386,11 +386,8 @@ SLAE64>
 #### Checking VirusTotal with `shellcode.c`
 This shellcode is placed in the `shellcode.c` template. 
 1. Code is compiled and the executable uploaded to VirusTotal:
-
-<img src="https://galminyana.github.io/img/A07_VT_shellcode01.png" width="75%" height="75%">
-
+<img src="https://galminyana.github.io/img/A07_VT_shellcode01.png" width="45%" height="45%">
 2. VirusTotal analyzes it and the shellcode been detected by a total of 5 engines:
-
 <img src="https://galminyana.github.io/img/A07_VT_shellcode01_detected.png" width="75%" height="75%">
 
 #### Checking VirusTotal with the `TwoFish_Decrypter.c`
@@ -400,7 +397,7 @@ To see if the encryption used is effective, the same is doing using the Crypt Sc
 2. The encrypted shellcode, IV and password are placed in the `TwoFish_Decrypter.c` and compiled
 <img src="https://galminyana.github.io/img/A07_VT_shellcode03.png" width="75%" height="75%">
 3. The executable `./TwoFish_Decrypter` is uploaded to VirusTotal
-<img src="https://galminyana.github.io/img/A07_VT_shellcode04.png" width="75%" height="75%">
+<img src="https://galminyana.github.io/img/A07_VT_shellcode04.png" width="45%" height="45%">
 4. And running the analysis, this time no AV engine detected the shellcode!
 <img src="https://galminyana.github.io/img/A07_VT_shellcode05.png" width="75%" height="75%">
 	
