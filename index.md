@@ -22,6 +22,7 @@ Below are the links to the posts containing the certification assignments.
 ##### Assignment 05
 
 ##### Assignment 06
+- [Polymorphic Versions for Choosen Shellcodes](Assignment06)
 
 ##### Assignment 07
  - [Custom Crypter. PoC](Assignment07)
