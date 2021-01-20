@@ -20,6 +20,7 @@ Below are the links to the posts containing the certification assignments.
  - [Custom Encoding Scheme. PoC](Assignment04)
 
 ##### Assignment 05
+- [`linux/x64/exec` Shellcode](Assignment05-1)
 
 ##### Assignment 06
 - [Polymorphic Versions for Choosen Shellcodes](Assignment06)
