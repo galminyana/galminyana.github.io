@@ -424,7 +424,7 @@ real_start:
 ```
 ### GitHub Repo Files
 ---
-The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment04) for this assignment contains the following files:
+The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment06) for this assignment contains the following files:
 
 - [Sample_1_Original.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_1_Original.nasm) : Contains the original code for the first sample shellcode, `sethostname() & killall 33`
 - [Sample_1_Polymorph.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_1_Polymorph.nasm) : Polymorph version for the `sethostname() & killall` shellcode.
