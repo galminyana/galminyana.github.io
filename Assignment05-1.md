@@ -392,7 +392,8 @@ rsp            0x7fffffffe738      0x7fffffffe738   <== RSP Updated
   0x555555558080 <code+32>:	"/bin/ls -l"
   (gdb)
   ```
-9. Now we define a `hook-stop` to follow up the values of **RSP** and **RSI** as this last one is the register that still does not have the right value before the syscall. Now have to `stepi` blind as `gdb` does not show the instruction when disassembles:
+9. Now we define a `hook-stop` to follow up the values of **RSP** and **RSI** as this last one is the register that still does not have the right value before the syscall. Now have to `stepi` blindly as `gdb` does not show the instruction when disassembles:
+
 ```asm
 (gdb) define hook-stop
 Type commands for definition of "hook-stop".
@@ -413,7 +414,6 @@ rsp            0x7fffffffe728      0x7fffffffe728     <== 64 bits more been push
 0x7fffffffe728:	0x00007fffffffe750
 0x000055555555808d in code ()
 (gdb) 
-
 ```
   At this point `gdb` recovered and next instruction to execute will be +45 `mov rsi, rsp`. 
   ```asm
