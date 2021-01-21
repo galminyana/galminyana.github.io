@@ -32,25 +32,27 @@ Description:
   
 **_REMOVED THE REST_**
 ```
-The payload is only 40 bytes, and it requires a parameter in the `CMD` option that's the command to execute.
+The payload is only 40 bytes and it requires a parameter in the `CMD` option, that's the command to execute. 
 
 ### Creating the Shellcode
 ---
-The comand to execute in the payload is `cat /etc/passwd`. Let's generate the payload:
+Will execute the `ls -l` command. Decided to use a command that can receive options to check how the payload handles it. Also added the full path to make the command string a 7 bytes length only. Let's generate the payload:
 ```bash
-SLAE64> msfvenom -p linux/x64/exec CMD="cat /etc/passwd" -f c
+SLAE64> msfvenom -p linux/x64/exec CMD="/bin/ls -l" -f c
 [-] No platform was selected, choosing Msf::Module::Platform::Linux from the payload
 [-] No arch selected, selecting arch: x64 from the payload
 No encoder specified, outputting raw payload
-Payload size: 55 bytes
-Final size of c file: 256 bytes
+Payload size: 50 bytes
+Final size of c file: 236 bytes
 unsigned char buf[] = 
 "\x6a\x3b\x58\x99\x48\xbb\x2f\x62\x69\x6e\x2f\x73\x68\x00\x53"
-"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x10\x00"
-"\x00\x00\x63\x61\x74\x20\x2f\x65\x74\x63\x2f\x70\x61\x73\x73"
-"\x77\x64\x00\x56\x57\x48\x89\xe6\x0f\x05";
+"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x0b\x00"
+"\x00\x00\x2f\x62\x69\x6e\x2f\x6c\x73\x20\x2d\x6c\x00\x56\x57"
+"\x48\x89\xe6\x0f\x05";
+SLAE64> 
+
 ```
-The generated shellcode is a total of 55 bytes in size.
+The generated payload size is 50 bytes, it increased it's size. This increase from 40 bytes is because the 10 bytes of `/bin/ls -l` string. Interesting.
 
 ### Run Shellcode. The C Template
 ---
@@ -61,9 +63,9 @@ To run the shellcode, will use of the `shellcode.c` template renamoed to `Payloa
 
 unsigned char code[]= \
 "\x6a\x3b\x58\x99\x48\xbb\x2f\x62\x69\x6e\x2f\x73\x68\x00\x53"
-"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x10\x00"
-"\x00\x00\x63\x61\x74\x20\x2f\x65\x74\x63\x2f\x70\x61\x73\x73"
-"\x77\x64\x00\x56\x57\x48\x89\xe6\x0f\x05";
+"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x0b\x00"
+"\x00\x00\x2f\x62\x69\x6e\x2f\x6c\x73\x20\x2d\x6c\x00\x56\x57"
+"\x48\x89\xe6\x0f\x05";
 
 void main()
 {
@@ -76,13 +78,14 @@ Now it can be compiled:
 ```bash
 gcc -fno-stack-protector -z execstack Payload_01.c -o Payload_01
 ```
-When it's run, it shows the contents of `/etc/passwd` file:
+When it's run, it shows the files of the directory:
 
 <img src="https://galminyana.github.io/img/A051_Shellcode_Run.png" width="75%" height="75%">
 
 ### `objdump`: First Approach
 ---
-Once we get the executable, will use `objdump` to disassemble the ASM code. As `objdump` will disassemble the code by sections, the one of interest is the `<code>` section that is the one containing the shellcode:
+Once we get the executable, will use `objdump` to disassemble the ASM code. As `objdump` disassembles the code by sections, the one of interest is the `<code>` section. Is the one containing the shellcode:
+
 ```bash
 SLAE64> objdump -M intel -D Payload_01
 
@@ -99,30 +102,63 @@ SLAE64> objdump -M intel -D Payload_01
     4072:	68 2d 63 00 00       	push   0x632d
     4077:	48 89 e6             	mov    rsi,rsp
     407a:	52                   	push   rdx
-    407b:	e8 10 00 00 00       	call   4090 <code+0x30>
-    4080:	63 61 74             	movsxd esp,DWORD PTR [rcx+0x74]
-    4083:	20 2f                	and    BYTE PTR [rdi],ch
-    4085:	65 74 63             	gs je  40eb <_end+0x4b>
-    4088:	2f                   	(bad)  
-    4089:	70 61                	jo     40ec <_end+0x4c>
-    408b:	73 73                	jae    4100 <_end+0x60>
-    408d:	77 64                	ja     40f3 <_end+0x53>
-    408f:	00 56 57             	add    BYTE PTR [rsi+0x57],dl
-    4092:	48 89 e6             	mov    rsi,rsp
-    4095:	0f 05                	syscall 
+    407b:	e8 0b 00 00 00       	call   408b <code+0x2b>
+    4080:	2f                   	(bad)  
+    4081:	62                   	(bad)  
+    4082:	69 6e 2f 6c 73 20 2d 	imul   ebp,DWORD PTR [rsi+0x2f],0x2d20736c
+    4089:	6c                   	ins    BYTE PTR es:[rdi],dx
+    408a:	00 56 57             	add    BYTE PTR [rsi+0x57],dl
+    408d:	48 89 e6             	mov    rsi,rsp
+    4090:	0f 05                	syscall 
 	...
 
 **_REMOVED_**
 
 SLAE64> 
 ```
-
-This disassembled code can be taken from GDB, and must be the same:
-
-<img src="https://galminyana.github.io/img/A051_Shellcode_gdb_01.png" width="75%" height="75%">
+Interesting that `objdump` detects some instructions as `(bad)`. Will have to check it.
 
 ### The Fun: GDB Analysis
 ---
+After opening the file in `gdb` and set the `set disassembly-flavor intel`, a breakpoint is placed in `*&code` address. This is where the shellcode is placed in the executable and will let to start debugging just when the shellcode starts. Once the breakpoint is `set` the `run` comand executes it until reaching the breakpoint, to `disassemble` the code:
+```bash
+SLAE64> gdb ./Payload_01
+GNU gdb (Debian 8.2.1-2+b3) 8.2.1
+
+**_REMOVED_**
+
+Reading symbols from ./Payload_01...(no debugging symbols found)...done.
+(gdb) set disassembly-flavor intel
+(gdb) break *&code
+Breakpoint 1 at 0x4060
+(gdb) run
+Starting program: /root/SLAE64/Exam/Assignment05/Payload_01 
+ShellCode Lenght: 13
+
+Breakpoint 1, 0x0000555555558060 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+=> 0x0000555555558060 <+0>:	push   0x3b
+   0x0000555555558062 <+2>:	pop    rax
+   0x0000555555558063 <+3>:	cdq    
+   0x0000555555558064 <+4>:	movabs rbx,0x68732f6e69622f
+   0x000055555555806e <+14>:	push   rbx
+   0x000055555555806f <+15>:	mov    rdi,rsp
+   0x0000555555558072 <+18>:	push   0x632d
+   0x0000555555558077 <+23>:	mov    rsi,rsp
+   0x000055555555807a <+26>:	push   rdx
+   0x000055555555807b <+27>:	call   0x55555555808b <code+43>
+   0x0000555555558080 <+32>:	(bad)  
+   0x0000555555558081 <+33>:	(bad)  
+   0x0000555555558082 <+34>:	imul   ebp,DWORD PTR [rsi+0x2f],0x2d20736c
+   0x0000555555558089 <+41>:	ins    BYTE PTR es:[rdi],dx
+   0x000055555555808a <+42>:	add    BYTE PTR [rsi+0x57],dl
+   0x000055555555808d <+45>:	mov    rsi,rsp
+   0x0000555555558090 <+48>:	syscall 
+   0x0000555555558092 <+50>:	add    BYTE PTR [rax],al
+End of assembler dump.
+(gdb) 
+```
 
 
 
