@@ -32,25 +32,24 @@ Description:
   
 **_REMOVED THE REST_**
 ```
-The payload is only 40 bytes, and it requires a parameter in the `CMD` option that's the command to execute.
+The payload is only 40 bytes and it requires a parameter in the `CMD` option, that's the command to execute. 
 
 ### Creating the Shellcode
 ---
-The comand to execute in the payload is `cat /etc/passwd`. Let's generate the payload:
+Will execute the `ls -l` command. Decided to use a command that can receive options to check how the payload handles it. Let's generate the payload:
 ```bash
-SLAE64> msfvenom -p linux/x64/exec CMD="cat /etc/passwd" -f c
+SLAE64> msfvenom -p linux/x64/exec CMD="ls -l" -f c
 [-] No platform was selected, choosing Msf::Module::Platform::Linux from the payload
 [-] No arch selected, selecting arch: x64 from the payload
 No encoder specified, outputting raw payload
-Payload size: 55 bytes
-Final size of c file: 256 bytes
+Payload size: 45 bytes
+Final size of c file: 213 bytes
 unsigned char buf[] = 
 "\x6a\x3b\x58\x99\x48\xbb\x2f\x62\x69\x6e\x2f\x73\x68\x00\x53"
-"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x10\x00"
-"\x00\x00\x63\x61\x74\x20\x2f\x65\x74\x63\x2f\x70\x61\x73\x73"
-"\x77\x64\x00\x56\x57\x48\x89\xe6\x0f\x05";
+"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x06\x00"
+"\x00\x00\x6c\x73\x20\x2d\x6c\x00\x56\x57\x48\x89\xe6\x0f\x05";
 ```
-The generated shellcode is a total of 55 bytes in size.
+The generated payload size is 45 bytes now. This increase from 40 bytes is due the 5 bytes that the `ls -l` command to execute adds to it. This means that in some way the payload stores the command.
 
 ### Run Shellcode. The C Template
 ---
@@ -61,9 +60,8 @@ To run the shellcode, will use of the `shellcode.c` template renamoed to `Payloa
 
 unsigned char code[]= \
 "\x6a\x3b\x58\x99\x48\xbb\x2f\x62\x69\x6e\x2f\x73\x68\x00\x53"
-"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x10\x00"
-"\x00\x00\x63\x61\x74\x20\x2f\x65\x74\x63\x2f\x70\x61\x73\x73"
-"\x77\x64\x00\x56\x57\x48\x89\xe6\x0f\x05";
+"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x06\x00"
+"\x00\x00\x6c\x73\x20\x2d\x6c\x00\x56\x57\x48\x89\xe6\x0f\x05";
 
 void main()
 {
