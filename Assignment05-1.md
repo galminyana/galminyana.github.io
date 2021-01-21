@@ -231,8 +231,7 @@ Dump of assembler code for function code:
 End of assembler dump.
 (gdb) 
 ```
-
-
+At this point just something not so clear, the second parameter. 
 
 
 
