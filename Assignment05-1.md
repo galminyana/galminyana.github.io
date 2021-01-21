@@ -120,7 +120,7 @@ Interesting that `objdump` detects some instructions as `(bad)`. Will have to ch
 
 ### The Fun: GDB Analysis
 ---
-After opening the file in `gdb` and set the `set disassembly-flavor intel`, a breakpoint is placed in `*&code` address. This is where the shellcode is placed in the executable and will let to start debugging just when the shellcode starts. Once the breakpoint is `set` the `run` comand executes it until reaching the breakpoint, to `disassemble` the code:
+After opening the file in `gdb` and set the `set disassembly-flavor intel`, a breakpoint is placed in `*&code` address. This is where the shellcode is placed and can start debugging just from there. Once the breakpoint is `set`, the `run` comand execs the code until reaching theit. Now if `disassemble` the code will show the payload code:
 ```bash
 SLAE64> gdb ./Payload_01
 GNU gdb (Debian 8.2.1-2+b3) 8.2.1
@@ -141,13 +141,13 @@ Dump of assembler code for function code:
 => 0x0000555555558060 <+0>:	push   0x3b
    0x0000555555558062 <+2>:	pop    rax
    0x0000555555558063 <+3>:	cdq    
-   0x0000555555558064 <+4>:	movabs rbx,0x68732f6e69622f
+   0x0000555555558064 <+4>:	movabs rbx,0x68732f6e69622f          <==
    0x000055555555806e <+14>:	push   rbx
    0x000055555555806f <+15>:	mov    rdi,rsp
-   0x0000555555558072 <+18>:	push   0x632d
+   0x0000555555558072 <+18>:	push   0x632d                        <==
    0x0000555555558077 <+23>:	mov    rsi,rsp
    0x000055555555807a <+26>:	push   rdx
-   0x000055555555807b <+27>:	call   0x55555555808b <code+43>
+   0x000055555555807b <+27>:	call   0x55555555808b <code+43>     
    0x0000555555558080 <+32>:	(bad)  
    0x0000555555558081 <+33>:	(bad)  
    0x0000555555558082 <+34>:	imul   ebp,DWORD PTR [rsi+0x2f],0x2d20736c
@@ -159,12 +159,78 @@ Dump of assembler code for function code:
 End of assembler dump.
 (gdb) 
 ```
+In the code, can see that some hex values are stored in registers and then in the stack. Let's convert all those hex values to get any clue of what the shellcode does. For that Python is used to convert and reverse values:
+```python
+>>> "68732f6e69622f".decode('hex')[::-1]
+'/bin/sh'
+>>> "632d".decode('hex')[::-1]
+'-c'
+>>> 
+```
+Those values from lines +4 and +18 of the code are the command that the payload uses to execute the defined `CMD` command. Still have to find where the choosen command is stored. Let's review the content of memory positions for the `(bad)` instructions. Those instructions are in positions `0x0000555555558080` and `0x0000555555558081`. Let's get the contents with `gdb`:
+```bash
+   0x000055555555807b <+27>:	call   0x55555555808b <code+43>
+   0x0000555555558080 <+32>:	(bad)                                        <==
+   0x0000555555558081 <+33>:	(bad)                                        <==
+   0x0000555555558082 <+34>:	imul   ebp,DWORD PTR [rsi+0x2f],0x2d20736c   
+   0x0000555555558089 <+41>:	ins    BYTE PTR es:[rdi],dx
+   0x000055555555808a <+42>:	add    BYTE PTR [rsi+0x57],dl
+   0x000055555555808d <+45>:	mov    rsi,rsp
+   0x0000555555558090 <+48>:	syscall 
+   0x0000555555558092 <+50>:	add    BYTE PTR [rax],al
+End of assembler dump.
+(gdb) x/xg 0x0000555555558080
+0x555555558080 <code+32>:	0x20736c2f6e69622f
+(gdb) x/2xg 0x0000555555558080
+0x555555558080 <code+32>:	0x20736c2f6e69622f	0xe689485756006c2d
+(gdb) 
+```
+Let's check what's this hex values `0x20736c2f6e69622f` and `0xe689485756006c2d` are:
+```python
+>>> "20736c2f6e69622f".decode('hex')[::-1]
+'/bin/ls '
+>>> "e689485756006c2d".decode('hex')[::-1]
+'-l\x00VWH\x89\xe6'
+>>> 
+```
+Here is the command `/bin/ls -l` stored in 10 bytes plus a NULL for the end of the string. Found it, it's stored in the `.text` section when the payload is created by `msfvenom`. The rest of the contents, `\x00VWH\x89\xe6` are the code instructions. With this, discovered why the mess in the code with the `(bad)` as it's for storing the command. 
 
+> At this point we know that `/bin/sh -c` is stored in the stack, and the `/bin/ls -l` in the `.text` section in the 
 
-
-
-
-
+Going further, a `syscall` instruction is made. Let's get which one is and what are it's parameters. Reviewing the code, the instructions at +0 and +2 assigns the `0x3b` value to RAX, the register to define the syscall number. This value is decimal 59 that stands for the `execve` syscall:
+```bash
+Dump of assembler code for function code:
+=> 0x0000555555558060 <+0>:	push   0x3b   <==  Syscall Number
+   0x0000555555558062 <+2>:	pop    rax    <==
+   0x0000555555558063 <+3>:	cdq    
+**_REMOVED_**
+   0x0000555555558092 <+50>:	add    BYTE PTR [rax],al
+End of assembler dump.
+(gdb) 
+```
+From `execve` manpage:
+```c
+int  execve  (const  char  *filename,  const  char *argv [], const char *envp[]);
+```
+In assembly, params for this syscall are mapped to the following registers:
+- RDI for `const  char  *filename`. This has to be the pointer to the `/bin/sh` command that's stored in the stack.
+- RSI for `const  char *argv []`. The pointer to the address of the parameters for the command, in this case parameters are `/bin/sh` itself and `-c`.
+- RDX for `const char *envp[]`. This value will be NULL (`0x0000000000000000`).
+This is done in the following line codes:
+```asm
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x0000555555558063 <+3>:	cdq                 <== RDX <- 0x00
+   0x0000555555558064 <+4>:	movabs rbx,0x68732f6e69622f
+   0x000055555555806e <+14>:	push   rbx          <== Stores /bin/sh
+   0x000055555555806f <+15>:	mov    rdi,rsp      <== RSP has the pointer to /bin/sh, puts it in RDI
+   0x0000555555558072 <+18>:	push   0x632d
+   0x0000555555558077 <+23>:	mov    rsi,rsp      <== Second parameter
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
 
 
 
