@@ -30,14 +30,14 @@ CMD                    yes       The command string to execute
 Description:
   Execute an arbitrary command
   
-**_REMOVED THE REST_**
+**_REMOVED_**
 ```
 The payload is only 40 bytes and it requires a parameter in the `CMD` option, that's the command to execute. 
 
 ### Creating the Shellcode
 ---
 Will execute the `ls -l` command. Decided to use a command that can receive options to check how the payload handles it. Also added the full path to make the command string a 7 bytes length only. Let's generate the payload:
-```bash
+```c
 SLAE64> msfvenom -p linux/x64/exec CMD="/bin/ls -l" -f c
 [-] No platform was selected, choosing Msf::Module::Platform::Linux from the payload
 [-] No arch selected, selecting arch: x64 from the payload
@@ -86,7 +86,7 @@ When it's run, it shows the files of the directory:
 ---
 Once we get the executable, will use `objdump` to disassemble the ASM code. As `objdump` disassembles the code by sections, the one of interest is the `<code>` section. Is the one containing the shellcode:
 
-```bash
+```asm
 SLAE64> objdump -M intel -D Payload_01
 
 **_REMOVED_**
@@ -121,7 +121,7 @@ Interesting that `objdump` detects some instructions as `(bad)`. Will have to ch
 ### The Fun: GDB Analysis
 ---
 After opening the file in `gdb` and set the `set disassembly-flavor intel`, a breakpoint is placed in `*&code` address. This is where the shellcode is placed and can start debugging just from there. Once the breakpoint is `set`, the `run` comand execs the code until reaching theit. Now if `disassemble` the code will show the payload code:
-```bash
+```asm
 SLAE64> gdb ./Payload_01
 GNU gdb (Debian 8.2.1-2+b3) 8.2.1
 
@@ -168,7 +168,7 @@ In the code, can see that some hex values are stored in registers and then in th
 >>> 
 ```
 Those values from lines +4 and +18 of the code are the command that the payload uses to execute the defined `CMD` command. Still have to find where the choosen command is stored. Let's review the content of memory positions for the `(bad)` instructions. Those instructions are in positions `0x0000555555558080` and `0x0000555555558081`. Let's get the contents with `gdb`:
-```bash
+```asm
    0x000055555555807b <+27>:	call   0x55555555808b <code+43>
    0x0000555555558080 <+32>:	(bad)                                        <==
    0x0000555555558081 <+33>:	(bad)                                        <==
@@ -198,7 +198,7 @@ Here is the command `/bin/ls -l` stored in 10 bytes plus a NULL for the end of t
 > At this point we know that `/bin/sh -c` is stored in the stack, and the `/bin/ls -l` in the `.text` section in the 
 
 Going further, a `syscall` instruction is made. Let's get which one is and what are it's parameters. Reviewing the code, the instructions at +0 and +2 assigns the `0x3b` value to RAX, the register to define the syscall number. This value is decimal 59 that stands for the `execve` syscall:
-```bash
+```asm
 Dump of assembler code for function code:
 => 0x0000555555558060 <+0>:	push   0x3b   <==  Syscall Number
    0x0000555555558062 <+2>:	pop    rax    <==
@@ -216,6 +216,7 @@ In assembly, params for this syscall are mapped to the following registers:
 - RDI for `const  char  *filename`. This has to be the pointer to the `/bin/sh` command that's stored in the stack.
 - RSI for `const  char *argv []`. The pointer to the address of the parameters for the command, in this case parameters are `/bin/sh` itself and `-c`.
 - RDX for `const char *envp[]`. This value will be NULL (`0x0000000000000000`).
+
 This is done in the following line codes:
 ```asm
 (gdb) disassemble 
@@ -231,7 +232,193 @@ Dump of assembler code for function code:
 End of assembler dump.
 (gdb) 
 ```
-At this point just something not so clear, the second parameter. 
+At this point just something not so clear, the second parameter. Let's think about the `call` instruction on +27. How does `call` work:
+
+1. Stores de Address of next instruction in the stack
+2. Increments RSP
+3. Jumps to the address
+
+This means that once the instruction at +27 (`call 0x55555555808b <code+43>`) executes, the address of the parameters (`/bin/ls -l`) for the `execve` syscall are stored in the Stack and pointed by RSP. Hence why the instruction at +43 (`mov rsi,rsp`) is just before the `syscall`, to place the value of the adress containing the adress for the parameters:
+```asm
+(gdb) disassemble
+**_REMOVED_**
+0x000055555555807a <+26>:	push   rdx
+0x000055555555807b <+27>:	call   0x55555555808b <code+43>     <== Pushes in stack the address of second parameter
+0x0000555555558080 <+32>:	(bad)  
+0x0000555555558081 <+33>:	(bad)  
+0x0000555555558082 <+34>:	imul   ebp,DWORD PTR [rsi+0x2f],0x2d20736c
+0x0000555555558089 <+41>:	ins    BYTE PTR es:[rdi],dx
+0x000055555555808a <+42>:	add    BYTE PTR [rsi+0x57],dl
+0x000055555555808d <+45>:	mov    rsi,rsp                      <== RSI <- Address of address containing the parameter string
+0x0000555555558090 <+48>:	syscall 
+**_REMOVED_^^
+(gdb)
+```
+The call jumps to +43 (`0x55555555808b`), and there, the code does "something" to continue and finally end at +45 to execute the `mov rsi, rsp` to definitelly place the second parameter into RSI for the syscall. Here `gdb` probably is not properly disassembling, because the `call` goes to +43 while at +42 there is an `add`. 
+
+One step more, run the code step by step and see what we can find out. Will do the following steps to get the info about register status during the execution and see if it's values are the right ones and match with the values of them just before `syscall`: 
+
+1. Get the original value of **RSP** when the shellcode begins, and take well note of it: **0x7fffffffe758**
+```asm
+(gdb) disassemble 
+Dump of assembler code for function code:
+=> 0x0000555555558060 <+0>:	push   0x3b
+**_REMOVED_** 
+   0x0000555555558090 <+48>:	syscall 
+   0x0000555555558092 <+50>:	add    BYTE PTR [rax],al
+End of assembler dump.
+(gdb) info registers rsp
+rsp            0x7fffffffe758      0x7fffffffe758
+(gdb) 
+```
+2. `stepi`'ing instructions at +0 and +2, **RAX** gets the syscall number as it's value, **`0x3b`**. This value has to be the same just before the syscall. Also at +3 **RDX** gets value **0x00** by the `cdq`.
+```asm
+(gdb) stepi
+0x0000555555558062 in code ()
+(gdb) stepi
+0x0000555555558063 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+   0x0000555555558060 <+0>:	push   0x3b
+   0x0000555555558062 <+2>:	pop    rax
+=> 0x0000555555558063 <+3>:	cdq    
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rax
+rax            0x3b                59
+(gdb) 
+```
+3. `stepi`'ing +4 and +14 pushes the `"/bin/sh",0x00` string in the stack. Here the original **RSP** would decrease 8 positions it's value to **`0x7fffffffe750`** (the 8 bytes pushed in the string). 
+```asm
+(gdb) stepi
+0x000055555555806f in code ()
+(gdb) disassemble 
+**_REMOVED_**
+   0x0000555555558064 <+4>:	movabs rbx,0x68732f6e69622f
+   0x000055555555806e <+14>:	push   rbx                  <== "/bin/sh",0x00 o the stack
+=> 0x000055555555806f <+15>:	mov    rdi,rsp              
+**_REMOVED__*
+End of assembler dump.
+(gdb) info registers rsp
+rsp            0x7fffffffe750      0x7fffffffe750
+(gdb) x/1xg $rsp
+0x7fffffffe750:	0x0068732f6e69622f
+(gdb) x/s $rsp
+0x7fffffffe750:	"/bin/sh"
+(gdb) 
+```` 
+4. **RDI** register gets the address **`0x7fffffffe750`**, that is the memory position storing the `/bin/sh` command string first parameter of `execve`). The **RDI** value has to be **`0x7fffffffe750`**. Everything looks fine by now:
+```asm
+(gdb) disassemble 
+**_REMOVED_**
+   0x000055555555806e <+14>:	push   rbx
+   0x000055555555806f <+15>:	mov    rdi,rsp
+=> 0x0000555555558072 <+18>:	push   0x632d
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rsp
+rsp            0x7fffffffe750      0x7fffffffe750
+(gdb) info registers rdi
+rdi            0x7fffffffe750      140737488349008
+(gdb) x/s $rsp
+0x7fffffffe750:	"/bin/sh"
+(gdb) 
+```
+5. Next, the `-c` string as the command parameter has to be also stacked. **RSP** updates to point now to **`0x7fffffffe748`**, and the top of the stack contains the string `"-c"`:
+```asm
+(gdb) stepi
+0x0000555555558077 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x0000555555558072 <+18>:	push   0x632d
+=> 0x0000555555558077 <+23>:	mov    rsi,rsp
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rsp 
+rsp            0x7fffffffe748      0x7fffffffe748
+(gdb) x/s $rsp
+0x7fffffffe748:	"-c"
+(gdb) 
+```
+6. Next instruction, saves the value of **RSP** into **RSI**. Now **RSI** has te value **`0x7fffffffe748`**, pointing to the address of the first parameter for the command:
+```asm
+(gdb) stepi
+0x000055555555807a in code ()
+(gdb) disassemble 
+**_REMOVED_**
+   0x0000555555558077 <+23>:	mov    rsi,rsp
+=> 0x000055555555807a <+26>:	push   rdx
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rsp rsi
+rsp            0x7fffffffe748      0x7fffffffe748
+rsi            0x7fffffffe748      140737488349000
+(gdb) x/s $rsi
+0x7fffffffe748:	"-c"
+(gdb) 
+```
+7. **RDX** that contains a NULL is also `push`'ed, updating **RSP** value to **`0x7fffffffe740`**
+```asm
+(gdb) stepi
+0x000055555555807b in code ()
+(gdb) disassemble 
+**_REMOVED_**
+   0x000055555555807a <+26>:	push   rdx
+=> 0x000055555555807b <+27>:	call   0x55555555808b <code+43>
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rsp
+rsp            0x7fffffffe740      0x7fffffffe740
+(gdb) x/xg $rsp
+0x7fffffffe740:	0x0000000000000000
+(gdb) 
+```
+8. Now go to the `call` instruction. After executes, **`0x0000555555558080`** should be stacked and **RSP** updated -8 positions, to **`0x7fffffffe738`**:
+```asm
+(gdb) stepi                                         <= stepi
+0x000055555555808b in code ()                       <== Something strange done by gdb :-/
+                                                     == But it's the address pointed by CALL
+(gdb) info registers rsp 
+rsp            0x7fffffffe738      0x7fffffffe738   <== RSP Updated
+(gdb) x/x $rsp
+0x7fffffffe738:	0x0000555555558080                  <== CALL saves the next instruction address in the stack. 
+                                                     == For us is the address pointing to /bin/ls -l
+(gdb) 
+```
+  This address **`0x0000555555558080`** stacked, is the string defined as the program to execute for the payload, that in the `execve` call would be the 3th parameter. Let's check if this address really points to the `"/bin/ls -l"` string:
+  ```asm
+  (gdb) x/s 0x0000555555558080
+  0x555555558080 <code+32>:	"/bin/ls -l"
+  (gdb)
+  ```
+9. Now we define a `hook-stop` to follow up the values of **RSP** and **RSI** as this last one is the register that still does not have the right value before the syscall. Now have to `stepi` blind as `gdb` does not show the instruction when `disassemble`:
+```asm
+(gdb) define hook-stop
+Type commands for definition of "hook-stop".
+End with a line saying just "end".
+>info registers rsi rsp
+>x/xg $rsp
+>end
+(gdb) stepi                                           <== Another stepi
+rsi            0x7fffffffe748      140737488349000    <== Still points to '-c'
+rsp            0x7fffffffe730      0x7fffffffe730     <== 64 bits been pushed in the stack updating RSP
+0x7fffffffe730:	0x00007fffffffe748
+0x000055555555808c in code ()
+(gdb) x/s $rsi
+0x7fffffffe748:	"-c"                                  <== $RDI contais '-c'
+(gdb) stepi                                           <== Another stepi
+rsi            0x7fffffffe748      140737488349000
+rsp            0x7fffffffe728      0x7fffffffe728     <== 64 bits more been pushed in the stack updating RSP
+0x7fffffffe728:	0x00007fffffffe750
+0x000055555555808d in code ()
+(gdb) 
+
+```
+
+
+
+
 
 
 
