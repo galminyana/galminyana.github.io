@@ -589,7 +589,7 @@ The `call` does replace **RIP** value to jump to the instruction at `0x408b`. Re
 - Opcode 56: Stands for `push rsi`
 - Opcode 57: Stands for `push rdi`
 
-Also, if we take the shellcode from the `0x4080` to `0x4081` and convert it to a string:
+Notice that if we take the shellcode from the `0x4080` to `0x408a` adresses and convert it to a string, the `"/bin/ls -l",0x00` is stored on there:
 ```python
 >>> "2f62696e2f6c73202d6c00".decode('hex')
 '/bin/ls -l\x00'
@@ -597,7 +597,13 @@ Also, if we take the shellcode from the `0x4080` to `0x4081` and convert it to a
 ```
 Results in the string we defined as the comand to execute in the payload. Now everything makes sense :-)
 
-This shows that `msfvenom` when constructs the payload, has to take care to make the `call` function to jump to the first instruction after the length of the command string. 
+This shows that `msfvenom` when constructs the payload, has to take care to make the `call` function to jump to the first instruction after the length of the command string.
+
+This **`call`** technique used to store the `CMD` parameter during the payload generation, is interesting:
+- It allows to have any string stored in the `.text` section
+- Does not matter the size of the string. Does not need to be a multiple of 8, and add extra chars to it (avoids the use of strings like `/bin**//**ls` adding a extra "/" to make it multiple of 8).
+
+
 
 ### GitHub Repo Files
 ---
