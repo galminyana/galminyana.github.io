@@ -586,8 +586,8 @@ SLAE64>
 ```
 The `call` does replace **RIP** value to jump to the instruction at `0x408b`. Reviewing this opcodes:
 
-- Opcode 56: Stands for `push rsi`
-- Opcode 57: Stands for `push rdi`
+- Opcode 0x56: Stands for `push rsi`
+- Opcode 0x57: Stands for `push rdi`
 
 Notice that if we take the shellcode from the `0x4080` to `0x408a` adresses and convert it to a string, the `"/bin/ls -l",0x00` is stored on there:
 ```python
