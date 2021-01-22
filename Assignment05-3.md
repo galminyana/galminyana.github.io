@@ -136,3 +136,32 @@ SLAE64> objdump -M intel -D Payload_03
 SLAE64> 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+### GitHub Repo Files
+---
+The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment05) for this assignment contains the following files:
+
+- [Payload_03.c](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Payload_03.c) : The C file cloned from `shellcode.c` to execute the `linux/x64/shell_bind_tcp_random_port` shellcode.
+- [Shellcode_03.txt](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Shellcode_03.txt) : The rax shellcode in hex into a text file.
+
+### The End
+---
+This pages have been created for completing the requirements of the [SecurityTube Linux Assembly Expert certification](http://www.securitytube-training.com/online-courses/x8664-assembly-and-shellcoding-on-linux/index.html).
+
+Student ID: PA-14628
+ 
