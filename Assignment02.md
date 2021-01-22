@@ -209,7 +209,6 @@ The actual shellcode has several NULLs and a size of 223 bytes. With `objdump` o
 ```markdown
 SLAE64> objdump -M intel -d ReverseShell-ExecveStack.o
 ReverseShell-ExecveStack.o:     formato del fichero elf64-x86-64
-
 Desensamblado de la sección .text:
 
 0000000000000000 <_start>:
@@ -235,7 +234,9 @@ By checking with `objdump` that the NULLs have been removed, next step is to red
 - Using CDQ instruction to ZEROing RDX. It puts RDX to 0x00 if RAX >= 0
 - replace `mov` instructions by `push;pop`
 
-But still the shellcode size can be reduced: the original code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode that uses 7 bytes. For this the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. Just like did in previous assignment.
+But still the shellcode size can be reduced, and can use more sophisticated techniques to even reduce it more:
+- Original code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode that uses 7 bytes. For this the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. Just like did in previous assignment.
+- Original code for the Execve stuff also can be reduced. Changing the registers use, will allow us to use other instructions that will have less bytes opcodes. This mainly means to nearly re-do all the code section.
 
 With all the job done, the shellcode is generated with the one liner command for `objdump`:
 ```markdown
