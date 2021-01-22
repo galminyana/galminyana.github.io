@@ -258,7 +258,7 @@ The call jumps to +43 (`0x55555555808b`), and there, the code does "something" t
 
 One step more, run the code step by step and see what we can find out. Will do the following steps to get the info about register status during the execution and see if it's values are the right ones and match with the values of them just before `syscall`: 
 
-1. Get the original value of **RSP** when the shellcode begins, and take well note of it: **0x7fffffffe758**
+1. Get the original value of **RSP** when the shellcode begins, and take well note of it: **`0x7fffffffe758`**
 ```asm
 (gdb) disassemble 
 Dump of assembler code for function code:
@@ -307,7 +307,7 @@ rsp            0x7fffffffe750      0x7fffffffe750
 0x7fffffffe750:	"/bin/sh"
 (gdb) 
 ```` 
-4. **RDI** register gets the address **`0x7fffffffe750`**, that is the memory position storing the `/bin/sh` command string first parameter of `execve`). The **RDI** value has to be **`0x7fffffffe750`**. Everything looks fine by now:
+4. **RDI** register gets the address **`0x7fffffffe750`**, that is the memory position storing the `/bin/sh` command string first parameter of `execve`). The **RDI** value has to be **`0x7fffffffe750`**. _The value of RDI should not change anymore_. Everything looks fine by now:
 ```asm
 (gdb) disassemble 
 **_REMOVED_**
@@ -442,9 +442,9 @@ rsp            0x7fffffffe728      0x7fffffffe728     <== 64 bits more been push
   ```
 ##### Let's do a break in the debugging...
 ...to check every register and stack contents, for everything looks as it should. 
-As had to blindly `stepi` by two instructions, need to ensure that values for the registers are the ones that should be for the analysis being done until now:
+As had to blindly `stepi` by two instructions, need to ensure that values for the registers are the ones that should be for the analysis being done until now. All are correct:
 
-- RAX : 0x3b
+- **RAX** : `0x3b`
 
 ```asm
 (gdb) info registers rax 
@@ -452,7 +452,7 @@ rax            0x3b                59
 (gdb) 
 ```
 
-- RDI : 0x7fffffffe750  ==> Address of /bin/sh
+- **RDI** : `0x7fffffffe750`  ==> Address of /bin/sh
 
 ```asm
 (gdb) info registers rax 
@@ -464,7 +464,7 @@ rdi            0x7fffffffe750      140737488349008
 (gdb) 
 ```
 
-- RSI : 0x7fffffffe748  ==> Address of '-c' in the stack
+- **RSI** : `0x7fffffffe748`  ==> Address of '-c' in the stack
 
 ```asm
 (gdb) info registers rsi
@@ -474,7 +474,7 @@ rsi            0x7fffffffe748      140737488349000
 (gdb) 
 ```
 
-- RDX : 0x00
+- **RDX** : 0x00
 
 ```asm
 (gdb) info registers rdx
@@ -499,6 +499,11 @@ All looks good, the part where had to `stepi` blindly, didnt change the original
 0x7fffffffe748:	"-c"
 (gdb) 
 ```
+By the operations done in the blind code and the actual values of the registers, what has to be done is:
+```asm
+push rsi    <== the @ for "-c"
+push rdi    <== the @ for //bin/sh"
+```
 
 9. Let's `stepi`, this is where definitelly **RSI** get's the pointer to the second parameter for the `execve` syscall.
 ```asm
@@ -515,28 +520,90 @@ rsi            0x7fffffffe728      140737488348968        <== Same value as RSP
 rsp            0x7fffffffe728      0x7fffffffe728
 (gdb) 
 ```
-Let's ensure that the **RSI** register points to the start of the 
+Let's review the status of the stack:
+```markdown
+  Stack Address      Value pointing a sting    String pointed 
+|------------------|------------------------|------------------|
+|  0x7fffffffe728  |   0x00007fffffffe750   | "/bin/sh"        |
+|  0x7fffffffe730  |   0x00007fffffffe748   | "-c"             |
+|  0x7fffffffe738  |   0x0000555555558080   | "/bin/ls -l"     |
+|  0x7fffffffe740  |   0x0000000000000000   | n/a              |
+|------------------------------------------ -------------------|
+```
+At this point, the **`const  char *argv []`** is referenced by **RSI** that got the value of **RSP** (`0x7fffffffe728`). From there, the rest of the required params are also in order in the stack. With everything looking in order, can go into the syscall, that will finally execute the `/bin/ls` comand:
+```asm
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x000055555555808d <+45>:	mov    rsi,rsp
+=> 0x0000555555558090 <+48>:	syscall 
+   0x0000555555558092 <+50>:	add    BYTE PTR [rax],al
+End of assembler dump.
+(gdb) stepi
+process 1123 is executing new program: /usr/bin/dash
 
+[1]+  Detenido                gdb ./Payload_01
+root@debian:~/SLAE64/Exam/Assignment05# 
+```
+Everything worked as expected!
 
+### Thoughts
+---
+Althought is a short payload, it havne't been easy. The following handicaps been found:
 
+- `gdb` not showing properly those blind instructions. Making it a bit more complicated to debug having to guess which instructions should been executed. This been resolved per the results on the stack and guessing which values should be stacked.
+- the `call` technique used, combined with the parameters for the payload stored in the code in the `.text` section had to be understood. Per how this is done, some shellcodes should have been added because the strings that `gdb` probably interprets wrongly
 
+The payload uses a mix of Stack and a new Technique using the `call` that results in a very interesting shellcode to review.
 
+#### `CALL` Trick Analysis. What about the _gdb_ issue
+If we check again the `objdump` output for the program:
+```asm
+SLAE64> objdump -M intel -D Payload_01
+**_REMOVED_**
+0000000000004060 <code>:
+    4060:	6a 3b                	push   0x3b
+    4062:	58                   	pop    rax
+    4063:	99                   	cdq    
+    4064:	48 bb 2f 62 69 6e 2f 	movabs rbx,0x68732f6e69622f
+    406b:	73 68 00 
+    406e:	53                   	push   rbx
+    406f:	48 89 e7             	mov    rdi,rsp
+    4072:	68 2d 63 00 00       	push   0x632d
+    4077:	48 89 e6             	mov    rsi,rsp
+    407a:	52                   	push   rdx
+    407b:	e8 0b 00 00 00       	call   408b <code+0x2b>
+    4080:	2f                   	(bad)  
+    4081:	62                   	(bad)  
+    4082:	69 6e 2f 6c 73 20 2d 	imul   ebp,DWORD PTR [rsi+0x2f],0x2d20736c
+    4089:	6c                   	ins    BYTE PTR es:[rdi],dx
+    408a:	00 56 57             	add    BYTE PTR [rsi+0x57],dl
+    408d:	48 89 e6             	mov    rsi,rsp
+    4090:	0f 05                	syscall 
+	...
+**_REMOVED_**
+SLAE64> 
+```
+The `call` does replace **RIP** value to jump to the instruction at `0x408b`. Reviewing this opcodes:
 
+- Opcode 56: Stands for `push rdi`
+- Opcode 57: Stands for `push rsi`
 
+Also, if we take the shellcode from the `0x4080` to `0x4081` and convert it to a string:
+```python
+>>> "2f62696e2f6c73202d6c00".decode('hex')
+'/bin/ls -l\x00'
+>>> 
+```
+Results in the string we defined as the comand to execute in the payload. Now everything makes sense :-)
 
-
-
-
-
-
+This shows that `msfvenom` when constructs the payload, has to take care to make the `call` function to jump to the first instruction after the length of the command string. 
 
 ### GitHub Repo Files
 ---
 The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment05) for this assignment contains the following files:
 
 - [Payload_01.c](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Payload_01.c) : The C file cloned from `shellcode.c` to execute the `linux/x64/exec` shellcode
-- [Payload_02.c](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Payload_02.c) : The C file cloned from `shellcode.c` to execute the shellcode
-- [Payload_03.c](https://github.com/galminyana/SLAE64/blob/main/Assignment05/Payload_03.c) : The C file cloned from `shellcode.c` to execute the shellcode
 
 ### The End
 ---
