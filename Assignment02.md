@@ -299,13 +299,15 @@ The shellcode can be executed. A `netcat` listener is opened in one terminal, wh
 
 <img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_V2_Result01.png" width="75%" height="75%">
 
-### GitHub Repo Files
+### GitHub Repo Files ena ExploitDB Submission
 ---
 The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment02) for this assignment contains the following files:
 
 - [ReverseShell-ExecveStack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack.nasm) : This is the ASM source code for the first version of the code. It's with NULLs and not caring on the shellcode size, but is more clear to understand the code.
 - [ReverseShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
 - [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment02/shellcode.c) : The C template with the V2 of the shellcode to run and execute
+
+This shellcode has been published at [Exploit-DB](https://www.exploit-db.com/), at [https://www.exploit-db.com/shellcodes/49442](https://www.exploit-db.com/shellcodes/49442)
 
 ### The End
 
