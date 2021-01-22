@@ -1,9 +1,9 @@
-## Assignment #5.1: Shellcode `l` Dissection
+## Assignment #5.1: Shellcode `linux/x64/shell_bind_tcp_random_port` Dissection
 ---
 ---
 ### Introduction
 ---
-The first `msfvenom` shellcode that is going to be dissected in functionality is the `linux/x64/exec` payload.
+The first `msfvenom` shellcode that is going to be dissected in functionality is the `linux/x64/shell_bind_tcp_random_port` payload.
 
 Let's see it's options:
 ```bash
