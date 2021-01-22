@@ -20,7 +20,9 @@ Below are the links to the posts containing the certification assignments.
  - [Custom Encoding Scheme. PoC](Assignment04)
 
 ##### Assignment 05
-- [`linux/x64/exec` Shellcode](Assignment05-1)
+- [Payload 01: `linux/x64/exec` Shellcode](Assignment05-1)
+- [Payload 02: `linux/x64/shell_bind_tcp_random_port` Shellcode](Assignment05-2)
+- [Payload 03: `XXXX` Shellcode](Assignment05-3)
 
 ##### Assignment 06
 - [Polymorphic Versions for Choosen Shellcodes](Assignment06)
