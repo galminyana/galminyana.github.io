@@ -440,8 +440,82 @@ rsp            0x7fffffffe728      0x7fffffffe728     <== 64 bits more been push
   End of assembler dump.
   (gdb) 
   ```
+##### Let's do a break in the debugging...
+...to check every register and stack contents, for everything looks as it should. 
+As had to blindly `stepi` by two instructions, need to ensure that values for the registers are the ones that should be for the analysis being done until now:
 
+- RAX : 0x3b
 
+```asm
+(gdb) info registers rax 
+rax            0x3b                59
+(gdb) 
+```
+
+- RDI : 0x7fffffffe750  ==> Address of /bin/sh
+
+```asm
+(gdb) info registers rax 
+rax            0x3b                59
+(gdb) info registers rdi
+rdi            0x7fffffffe750      140737488349008
+(gdb) x/s $rdi
+0x7fffffffe750:	"/bin/sh"
+(gdb) 
+```
+
+- RSI : 0x7fffffffe748  ==> Address of '-c' in the stack
+
+```asm
+(gdb) info registers rsi
+rsi            0x7fffffffe748      140737488349000
+(gdb) x/s $rsi
+0x7fffffffe748:	"-c"
+(gdb) 
+```
+
+- RDX : 0x00
+
+```asm
+(gdb) info registers rdx
+rdx            0x0                 0
+(gdb) 
+```
+##### End break
+All looks good, the part where had to `stepi` blindly, didnt change the original values of the registers. But also, in that blind code, some values been pushed in the stack in the right order required by the stack technique for `execve` syscall:
+- **`0x00007fffffffe750`**  that's the memory address for `/bin/sh` :
+```asm
+(gdb) x/x $rsp
+0x7fffffffe728:	0x00007fffffffe750
+(gdb) x/s 0x00007fffffffe750
+0x7fffffffe750:	"/bin/sh"
+(gdb) 
+```
+- **`0x00007fffffffe748`** that's the memory address for  `-c` :
+```asm
+(gdb) x/xg 0x7fffffffe730
+0x7fffffffe730:	0x00007fffffffe748
+(gdb) x/s 0x00007fffffffe748
+0x7fffffffe748:	"-c"
+(gdb) 
+```
+
+9. Let's `stepi`, this is where definitelly **RSI** get's the pointer to the second parameter for the `execve` syscall.
+```asm
+(gdb) stepi
+0x0000555555558090 in code ()
+(gdb) disassemble 
+**_REMOVED__**
+   0x000055555555808d <+45>:	mov    rsi,rsp
+=> 0x0000555555558090 <+48>:	syscall 
+   0x0000555555558092 <+50>:	add    BYTE PTR [rax],al
+End of assembler dump.
+(gdb) info registers rsi rsp
+rsi            0x7fffffffe728      140737488348968        <== Same value as RSP
+rsp            0x7fffffffe728      0x7fffffffe728
+(gdb) 
+```
+Let's ensure that the **RSI** register points to the start of the 
 
 
 
