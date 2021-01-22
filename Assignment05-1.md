@@ -3,7 +3,7 @@
 ---
 ### Introduction
 ---
-The first `msfvenom` shellcode that is going to be dessected in functionality is the `linux/x64/exec` payload.
+The first `msfvenom` shellcode that is going to be dissected in functionality is the `linux/x64/exec` payload.
 
 Let's see it's options:
 ```bash
@@ -29,8 +29,6 @@ CMD                    yes       The command string to execute
 
 Description:
   Execute an arbitrary command
-  
-**_REMOVED_**
 ```
 The payload is only 40 bytes and it requires a parameter in the `CMD` option, that's the command to execute. 
 
@@ -159,7 +157,7 @@ Dump of assembler code for function code:
 End of assembler dump.
 (gdb) 
 ```
-In the code, can see that some hex values are stored in registers and then in the stack. Let's convert all those hex values to get any clue of what the shellcode does. For that Python is used to convert and reverse values:
+In the code, can see that some hex values are stored in registers and then in the stack. Let's convert all those hex values, to get any clue and idea of what the shellcode does. For that, Python is used to convert and reverse values:
 ```python
 >>> "68732f6e69622f".decode('hex')[::-1]
 '/bin/sh'
@@ -167,7 +165,7 @@ In the code, can see that some hex values are stored in registers and then in th
 '-c'
 >>> 
 ```
-Those values from lines +4 and +18 of the code are the command that the payload uses to execute the defined `CMD` command. Still have to find where the choosen command is stored. Let's review the content of memory positions for the `(bad)` instructions. Those instructions are in positions `0x0000555555558080` and `0x0000555555558081`. Let's get the contents with `gdb`:
+Those values from lines +4 and +18 of the code, are the command that the payload has to execute and been defined in the `CMD` option. Still have to find where the choosen command is stored. Let's review the content of memory positions for the `(bad)` instructions. Those instructions are in positions `0x0000555555558080` and `0x0000555555558081`. Let's get the contents with `gdb`:
 ```asm
    0x000055555555807b <+27>:	call   0x55555555808b <code+43>
    0x0000555555558080 <+32>:	(bad)                                        <==
@@ -197,7 +195,7 @@ Here is the command `/bin/ls -l` stored in 10 bytes plus a NULL for the end of t
 
 > At this point we know that `/bin/sh -c` is stored in the stack, and the `/bin/ls -l` in the `.text` section in the 
 
-Going further, a `syscall` instruction is made. Let's get which one is and what are it's parameters. Reviewing the code, the instructions at +0 and +2 assigns the `0x3b` value to RAX, the register to define the syscall number. This value is decimal 59 that stands for the `execve` syscall:
+Going further, a `syscall` instruction is made. Let's get which one is and what are it's parameters. Reviewing the code, the instructions at +0 and +2 assigns the `0x3b` value to RAX, the register to define the syscall number. This value is decimal 59, that stands for the `execve` syscall:
 ```asm
 Dump of assembler code for function code:
 => 0x0000555555558060 <+0>:	push   0x3b   <==  Syscall Number
@@ -214,7 +212,7 @@ int  execve  (const  char  *filename,  const  char *argv [], const char *envp[])
 ```
 In assembly, params for this syscall are mapped to the following registers:
 - RDI for `const  char  *filename`. This has to be the pointer to the `/bin/sh` command that's stored in the stack.
-- RSI for `const  char *argv []`. The pointer to the address of the parameters for the command, in this case parameters are `/bin/sh` itself and `-c`.
+- RSI for `const  char *argv []`. The pointer to the address of the parameters for the command, in this case parameters are `/bin/sh` itself, `-c` and `/bin/ls -l".
 - RDX for `const char *envp[]`. This value will be NULL (`0x0000000000000000`).
 
 This is done in the following line codes:
@@ -530,7 +528,9 @@ Let's review the status of the stack:
 |  0x7fffffffe740  |   0x0000000000000000   | n/a              |
 |------------------------------------------ -------------------|
 ```
+
 At this point, the **`const  char *argv []`** is referenced by **RSI** that got the value of **RSP** (`0x7fffffffe728`). From there, the rest of the required params are also in order in the stack. With everything looking in order, can go into the syscall, that will finally execute the `/bin/ls` comand:
+
 ```asm
 (gdb) disassemble 
 Dump of assembler code for function code:
@@ -586,10 +586,10 @@ SLAE64>
 ```
 The `call` does replace **RIP** value to jump to the instruction at `0x408b`. Reviewing this opcodes:
 
-- Opcode 56: Stands for `push rsi`
-- Opcode 57: Stands for `push rdi`
+- Opcode 0x56: Stands for `push rsi`
+- Opcode 0x57: Stands for `push rdi`
 
-Also, if we take the shellcode from the `0x4080` to `0x4081` and convert it to a string:
+Notice that if we take the shellcode from the `0x4080` to `0x408a` adresses and convert it to a string, the `"/bin/ls -l",0x00` is stored on there:
 ```python
 >>> "2f62696e2f6c73202d6c00".decode('hex')
 '/bin/ls -l\x00'
@@ -597,7 +597,13 @@ Also, if we take the shellcode from the `0x4080` to `0x4081` and convert it to a
 ```
 Results in the string we defined as the comand to execute in the payload. Now everything makes sense :-)
 
-This shows that `msfvenom` when constructs the payload, has to take care to make the `call` function to jump to the first instruction after the length of the command string. 
+This shows that `msfvenom` when constructs the payload, has to take care to make the `call` function to jump to the first instruction after the length of the command string.
+
+This **`call`** technique used to store the `CMD` parameter during the payload generation, is interesting:
+- It allows to have any string stored in the `.text` section
+- Does not matter the size of the string. Does not need to be a multiple of 8, and add extra chars to it (avoids the use of strings like `/bin**//**ls` adding a extra "/" to make it multiple of 8).
+
+
 
 ### GitHub Repo Files
 ---
