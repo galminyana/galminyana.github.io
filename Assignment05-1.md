@@ -542,14 +542,14 @@ End of assembler dump.
 (gdb) stepi
 process 1123 is executing new program: /usr/bin/dash
 
-[1]+  Detenido                gdb ./Payload_01
-root@debian:~/SLAE64/Exam/Assignment05# 
+[1]+  Stopped                gdb ./Payload_01
+SLAE64> 
 ```
 Everything worked as expected!
 
 ### Thoughts
 ---
-Althought is a short payload, it havne't been easy. The following handicaps been found:
+The following handicaps been found:
 
 - `gdb` not showing properly those blind instructions. Making it a bit more complicated to debug having to guess which instructions should been executed. This been resolved per the results on the stack and guessing which values should be stacked.
 - the `call` technique used, combined with the parameters for the payload stored in the code in the `.text` section had to be understood. Per how this is done, some shellcodes should have been added because the strings that `gdb` probably interprets wrongly
@@ -586,8 +586,8 @@ SLAE64>
 ```
 The `call` does replace **RIP** value to jump to the instruction at `0x408b`. Reviewing this opcodes:
 
-- Opcode 56: Stands for `push rdi`
-- Opcode 57: Stands for `push rsi`
+- Opcode 56: Stands for `push rsi`
+- Opcode 57: Stands for `push rdi`
 
 Also, if we take the shellcode from the `0x4080` to `0x4081` and convert it to a string:
 ```python
