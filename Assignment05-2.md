@@ -295,6 +295,198 @@ Registers need this values:
 - RDI for the socket descriptor, that's already in RDI from the previous section (value "3")
 - RSI a pointer to the sockaddr
 - RDX the length of this struct
+As i don't understand why no values are assigned to RSI and RDX in the code, a further read of the `accept()` man page, clarifies everything:
+```c
+...
+When addr is NULL, nothing is filled in; in this case, addrlen is not used, and should also be NULL.
+...
+```
+This mean that this two registers can be set to 0x00. Let's understand what the code does:
+```asm
+(gdb) stepi
+0x0000555555558077 in code ()
+(gdb) stepi
+0x0000555555558079 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x0000555555558077 <+23>:	mov    al,0x2b     <== Syscall number for accept()
+=> 0x0000555555558079 <+25>:	syscall 
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+RSI and RDX already got the NULL (`0x00`) value at instructions at +16 and + 18. Let's review the values of the registers before the syscall:
+```asm
+(gdb) info registers rax rdi rsi rdx
+rax            0x2b                43
+rdi            0x3                 3
+rsi            0x0                 0
+rdx            0x0                 0
+(gdb) 
+```
+Good, the expected values. The syscall can be executed, and will return a socket descriptor in RAX. 
+
+#### Section 4: `sys_dup2`
+From the `dup2()` manpage:
+```c
+int dup2(int oldfd, int newfd);
+```
+This said, register values for this call have to be:
+- RAX for the syscall number, 0x21
+- RDI for the old socket descriptor. Has to be the value returned in RAX for the previous `accept` syscall
+- RSI for new file descriptor to duplicate the old descriptor. Will be the file descriptor for `stdin`, `stdout`, and `stderr`. 
+
+> Ass the `accept()` will pause the program until a connection is received, a `netcat` connection is done from another terminal. Still while debugging, the program wont work as expected because no `dup2()`and no `execve()` been done yet. 
+
+Reviewing the code:
+```asm
+(gdb) stepi
+0x000055555555807b in code ()
+(gdb) stepi
+0x000055555555807c in code ()
+(gdb) stepi
+0x000055555555807d in code ()
+(gdb) stepi
+0x000055555555807f in code ()
+(gdb) stepi
+0x0000555555558081 in code ()
+(gdb) stepi
+0x0000555555558083 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x000055555555807b <+27>:	push   rdi         <== RDI has the socket descriptor from `socket` call (that's "3")
+   0x000055555555807c <+28>:	pop    rsi         <== RSI <- Socket descriptor
+   0x000055555555807d <+29>:	xchg   rdi,rax     <== RDI <- Socket descriptor for the `accept`. This is the 
+   0x000055555555807f <+31>:	dec    esi         <== RDI = RDI - 1
+   0x0000555555558081 <+33>:	mov    al,0x21     <== Syscall Number for `dup2`
+=> 0x0000555555558083 <+35>:	syscall 
+   0x0000555555558085 <+37>:	jne    0x55555555807f <code+31>   <== Jumps to +31 to `dup2()` another new file descriptor
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+The code simply places the old file descriptor into RDI, and the new one into RSI. The `jne` at +37 jumps back to +31, that decrements the value for RSI to duplicate another new file descriptor. New file descriptors will be duplicated in this order: `stderr`("2"), `stdout`("1") and then `stdin`("0"). When RSI value is "0", then the jump is not done and the program continues the flow.
+To check that register valuesare correct before the syscall, let's place a breakpoinit at the +35 just before executing the syscall to be able to review it the 3 times it's called. Also at +39 `push rdx` after the duplication code to stop once it's done:
+```asm
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x000055555555807b <+27>:	push   rdi
+   0x000055555555807c <+28>:	pop    rsi
+   0x000055555555807d <+29>:	xchg   rdi,rax
+   0x000055555555807f <+31>:	dec    esi
+   0x0000555555558081 <+33>:	mov    al,0x21
+=> 0x0000555555558083 <+35>:	syscall 
+   0x0000555555558085 <+37>:	jne    0x55555555807f <code+31>
+   0x0000555555558087 <+39>:	push   rdx
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rdi rsi rax
+rdi            0x4                 4
+rsi            0x2                 2
+rax            0x21                33
+(gdb) b *0x0000555555558083
+Breakpoint 2 at 0x555555558083
+(gdb) b *0x0000555555558087
+Breakpoint 3 at 0x555555558087
+(gdb) 
+```
+In the first loop to duplicate `stderr`, RAX has to be 0x21, RDI has to be "0x04", and RSI has to be "0x02". Let's check:
+```asm
+(gdb) info registers rax rdi rsi
+rax            0x21                33
+rdi            0x4                 4
+rsi            0x2                 2
+(gdb) 
+```
+Let's `continue` execution. It will do the jump, do the operations, and again before executing the syscall. This is loop 2 to duplicate `stdout`, hence values for registers must be "0x21" for RAX, "0x04" for RDI and "0x01" for RSI:
+```asm
+(gdb) c
+Continuing.
+Breakpoint 2, 0x0000555555558083 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x000055555555807b <+27>:	push   rdi
+   0x000055555555807c <+28>:	pop    rsi
+   0x000055555555807d <+29>:	xchg   rdi,rax
+   0x000055555555807f <+31>:	dec    esi
+   0x0000555555558081 <+33>:	mov    al,0x21
+=> 0x0000555555558083 <+35>:	syscall 
+   0x0000555555558085 <+37>:	jne    0x55555555807f <code+31>
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rax rdi rsi
+rax            0x21                33
+rdi            0x4                 4
+rsi            0x1                 2
+(gdb) 
+```
+If `continue` again, will jump to +31 again for the duplication of `stdin`. Here the values have to be RAX to "0x21", RDI keeps the "0x04" value, and RSI updates to "0x00". 
+```asm
+(gdb) c
+Continuing.
+Breakpoint 2, 0x0000555555558083 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x000055555555807b <+27>:	push   rdi
+   0x000055555555807c <+28>:	pop    rsi
+   0x000055555555807d <+29>:	xchg   rdi,rax
+   0x000055555555807f <+31>:	dec    esi
+   0x0000555555558081 <+33>:	mov    al,0x21
+=> 0x0000555555558083 <+35>:	syscall 
+   0x0000555555558085 <+37>:	jne    0x55555555807f <code+31>
+**_REMOVED_**
+End of assembler dump.
+(gdb) info registers rax rdi rsi
+rax            0x21                33
+rdi            0x4                 4
+rsi            0x0                 0
+(gdb) 
+```
+Awesome. Everything as it should. Now let's `continue` the program, and this time won't jump and will stop at +39, ending the `dup2` section:
+```asm
+(gdb) c
+Continuing.
+Breakpoint 3, 0x0000555555558087 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+=> 0x0000555555558087 <+39>:	push   rdx
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+#### Section 5: `sys_execve`
+
+From the `execve` manpage:
+```c
+int  execve  (const  char  *filename,  
+              const  char *argv [], const char
+              *envp[]);
+```
+Also reviewing the code for this section in `gdb`, there is an hex value (`0x68732f6e69622f2f`) at +40 that ends being pushed in the stack at +50. Let's see what this value is:
+```python
+>>> "68732f6e69622f2f".decode('hex')[::-1]
+'//bin/sh'
+>>> 
+```` 
+This means that `execve` will execute the hardcoded command `//bin/sh`. And this defines values for the registers as follows:
+- RAX: Syscall number, "0x3b"
+- RDI: The memory address for the `//bin/sh` string
+- RSI: The pointer to the memory address containing the address of the `//bin/sh` string
+- RDX: NULL value, "0x00"
+
+
+
+
+
+
+
+
 
 
 
