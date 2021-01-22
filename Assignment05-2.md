@@ -477,8 +477,12 @@ Also reviewing the code for this section in `gdb`, there is an hex value (`0x687
 This means that `execve` will execute the hardcoded command `//bin/sh`. And this defines values for the registers as follows:
 - RAX: Syscall number, "0x3b"
 - RDI: The memory address for the `//bin/sh` string
-- RSI: The pointer to the memory address containing the address of the `//bin/sh` string
+- RSI: The pointer to the memory address containing the address of the parameters. As no parameters are needed or used, simply gets the NULL value "0x00"
 - RDX: NULL value, "0x00"
+The Stack Technique is used, hence will need to review the values pushed in the stack. `stepi`'ing and following the code, the stack contents just before the syscall should be:
+```asm
+
+
 
 
 
