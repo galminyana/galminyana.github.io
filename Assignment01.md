@@ -339,6 +339,7 @@ SLAE64> echo “\"$(objdump -d 0_BindShell-ExecveStack.o | grep '[0-9a-f]:' |
 
 SLAE64> 
 ```
+#### Shortening Shellcode Length
 
 But still the shellcode size can be reduced. V1 code is using Relative Addressing for the Password Stuff. This technique, forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode size of 7 bytes. For this reason, the Stack Technique is going to be used for the Password Stuff to replace Relative Addressing. The new code for the Password Stuff section after appliying changes is:
 ```asm
