@@ -253,7 +253,7 @@ execve_syscall:
 
 #### Putting All Together: The ASM File
 
-> The code for this first version of the Bind Shell, can be found in the [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-Execve-Stack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+> The code for this first version of the Bind Shell, can be found in the [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-Execve-Stack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01).
 
 Let's try the code compiling and linking it. Commands are:
 
@@ -280,7 +280,7 @@ If the password is incorrect, program will exit with a Segmentation Fault:
 ### Remove NULLs and Reduce Shellcode Size
 ---
 
-> The final ASM code after the changes explained in this section, can be found at the [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+> The final ASM code after the changes explained in this section, can be found at the [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01).
 
 The actual shellcode has several NULLs and a size of 274 bytes (too much!). Using `objdump` will get the opcodes and review the NULLs in the shellcode:
 
