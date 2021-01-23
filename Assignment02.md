@@ -23,7 +23,7 @@ As in the previous assignment, the program will exit with a Segmentation Fault i
 For Linux Sockets Programming, the following System calls are required on this assignment:
 ```c
 int socket(int domain, int type, int protocol); 
-connect(sock, (struct sockaddr *)&server, sockaddr_len) 
+int connect(sock, (struct sockaddr *)&server, sockaddr_len) 
 int close(int sockfd); 
 ```
 To duplicate the standard input, output and error, `dup2()` call will be used:
