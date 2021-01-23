@@ -12,7 +12,7 @@ The Encoder requires a working shellcode as input. This shellcode, will be encod
 
 The encoder will do the following: 
 - Rotate each byte of the shellcode 3 bits to left 
-- Do a ROT25 on each byte of the shellcode 
+- Do a **ROT25** on each byte of the shellcode 
 
 #### Left Shift Byte Bits
 First to do in the Encoder, is to shift 3 bites to left on each byte of the original shellcode:
