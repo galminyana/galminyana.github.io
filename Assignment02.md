@@ -26,12 +26,12 @@ int socket(int domain, int type, int protocol);
 int connect(sock, (struct sockaddr *)&server, sockaddr_len);
 int close(int sockfd); 
 ```
-To duplicate the standard input, output and error, `dup2()` call will be used:
+To duplicate the standard input, output and error, `sys_dup2` call will be used:
 
 ```c
 int dup2(int oldfd, int newfd); 
 ```
-And to execute `/bin/sh`, will use the `execve()` call:
+And to execute `/bin/sh`, will use `sys_execve`:
 ```c
 int execve(const char *filename, char *const argv[],  char *const envp[]);
 ```
@@ -68,8 +68,8 @@ int  connect(int  sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
 ```
 For this assignment, registers will get the following values: 
 
-- **RDI** : The sock descriptor id from the `open()` call 
-- **RSI** : Addres of the sockaddr struct 
+- **RDI** : The sock descriptor id from `sys_open` 
+- **RSI** : Addres of the `sockaddr` struct 
 - **RDX** : Length of the struct 
 
 First is to build the struct with the required data. This is done using the stack in the following code: 
@@ -91,7 +91,7 @@ sub rsp, 8                              ; Update RSP value
 ```
 The legth of this struct is a total of 16 bytes, and the address to the struct is in **RSP**. 
 
-Next step is do the call to `connect()`, placing **RSP** into **RSI** to point to the `sockaddr` struct, **RDI** already will have the socket descriptor id from before, and **RDX** the value "16" that's the length of the struct: 
+Next step is do the call to `sys_connect`, placing **RSP** into **RSI** to point to the `sockaddr` struct, **RDI** already will have the socket descriptor id from before, and **RDX** the value "16" that's the length of the struct: 
 ```asm
 ; connect(sock, (struct sockaddr *)&server, sockaddr_len) 
 
@@ -250,7 +250,7 @@ SLAE64>
 ```
 <img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Shellcode01.png" width="75%" height="75%">
 
-This shellcode could be more reduced, removing the stuff to print the `"Passwd: "` prompt. The `close()` call haven't been used in this assignment. But with the reduction to **123 bytes** is good enought.
+This shellcode could be more reduced, removing the stuff to print the `"Passwd: "` prompt. `sys_close` haven't been used in this assignment. But with the reduction to **123 bytes** is good enought.
 
 ### Executing Final Shellcode
 ---
