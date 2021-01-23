@@ -180,7 +180,7 @@ execve_syscall:
 
 #### Putting All Together
 
-The code for this first version of the Reverse Shell, can be found in the [ReverseShell-ExecveStack](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+The code for this first version of the Reverse Shell, can be found in the [ReverseShell-ExecveStack](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment02).
 
 Let's try the code compiling and linking it. Commands are:
 
@@ -200,7 +200,7 @@ Like in the previous assignment, if the password is correct, the program continu
 
 ### Remove NULLs and Reduce Shellcode Size
 ---
-> The final ASM code after the changes explained in this section, can be found at the [ReverseShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+> The final ASM code after the changes explained in this section, can be found at the [ReverseShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment02).
 
 The actual shellcode has several NULLs and a size of 223 bytes. With `objdump`, opcodes for the instructions are shown and can review the NULLs in the shellcode:
 
