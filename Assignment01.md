@@ -9,7 +9,7 @@ Requirements for this assignment are to create a Shell_Bind_TCP shellcode that:
   1. Listens on a specific port 
   2. Requires a password 
   3. If the password is correct, then Exec Shell is executed 
-  4. Also, the NULL bytes (0x00) must be removed from the shellcode 
+  4. Also, the NULL bytes (`0x00`) must be removed from the shellcode 
 
 To build the shellcode have to use linux sockets. Then, for the assignment, the following steps have to be done:
 
@@ -18,7 +18,7 @@ To build the shellcode have to use linux sockets. Then, for the assignment, the 
   3. Start listenning for connections 
   4. Accept incoming connections 
   5. Ask, read, and validate the password 
-  6. Duplicate `SDTIN`, `STDOUT` and `STDERR` to the socket descriptor 
+  6. Duplicate `stdin`, `stdout` and `stderr` to the socket descriptor 
   7. Execute /bin/sh for the incoming and validated conection 
 
 In case the password is not correct, the shellcode will exit with a Segmentation Fault. The shellcode won’t care on how the program terminates. This makes sense as shellcode will be smaller in size and really does not matter how it exits. 
@@ -32,13 +32,13 @@ int listen(int sockfd, int backlog);
 int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen); 
 int close(int sockfd); 
 ```
-To duplicate the standard input, output and error, `dup2()` call will be used: 
+To duplicate the standard input, output and error, `sys_dup2` will be used: 
 
 ```c
 int dup2(int oldfd, int newfd); 
 ```
 
-And to execute `/bin/sh`, `execve()` call will be used: 
+And to execute `/bin/sh`, `sys_execve` will be used: 
 
 ```c
 int execve(const char *filename, char *const argv[], char *const envp[]); 
@@ -68,7 +68,7 @@ To execute the `sys_socket` call, the arguments will have to be placed in the co
   - **RSI** <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
   - **RDX** <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
 
-The syscall will return a file descriptor in **RAX**, that is saved into **RDI**. This saves the socket_id for later use in the code
+The syscall will return a file descriptor in **RAX**, that is saved into **RDI**. This saves the socket descriptor id for later use in the code.
 
 #### Bind the Created Socket to a Port
 
@@ -94,11 +94,11 @@ This part irequires two steps:
 
   - Create the `struct sockaddr` structure. Stack is used to store the values of the struct:
     - Values are placed on the stack
-    - Stack Pointer (RSP) is updated with the new address
-  - Call the `bind` syscall. Values for parameters are placed into the registers:
+    - Stack Pointer (**RSP**) is updated with the new address
+  - Call to `sys_bind`. Values for parameters are placed into the registers:
     - **RAX**: Syscall number (49)
     - **RDI**: Socket descriptor. Already has the value from previous point
-    - **RSI**: Address of the struct. This value is in RSP
+    - **RSI**: Address of the struct. This value is in **RSP**
     - **RDX**: The lengh of the sockaddr struct. It's 16 bytes
 
 #### Listen for Incoming Connections
@@ -110,7 +110,7 @@ mov rax, 50          ; syscall number
 mov rsi, 2			     
 syscall 
 ```
-Values in the registers for the `listen` call parameters are:
+Values in the registers for `sys_ listen` are:
   - **RAX** <- 50 : Syscall Number 
   - **RDI** : Already stores the socket descriptor 
   - **RSI** <- 2 : Is the backlog parameter 
@@ -139,11 +139,11 @@ syscall
 ; Store the client socket descripion returned by accept 
 mov rbx, rax                 ; r9 <- client_sock 
 ```
-`accept()` requires the following parameters:
+`sys_accept` requires the following parameters:
 
-- Socket descriptor, that's already stored in RDI
-- Address of the struct by reference. Stack is used to store this struct reserving 16 bytes in stack. The data of this struct will be modified by the syscall and will access throught RSP register
-- Address where the length of the struct is stored. This value is stored in the stack. RSP has this value
+- Socket descriptor, that's already stored in **RDI**
+- Address of the struct by reference. Stack is used to store this struct reserving 16 bytes in stack. The data of this struct will be modified by the syscall and will access throught **RSP** register
+- Address where the length of the struct is stored. This value is stored in the stack. **RSP** has this value
 
 Registers get this values for the parametrers:
 - **RAX** <- 43 : Syscall Number 
@@ -160,7 +160,7 @@ This call returns a socket descriptor for the client, that is stored in R9 for f
 mov rax, 3                  ; syscall number
 syscall
 ```
-This is the easiest part. The "3" value is put into **RAX** for the syscall number for `close()`, and **RDI** already has the value of the socket descriptor to close.
+This is the easiest part. The "3" value is put into **RAX** for the syscall number for `sys_close`, and **RDI** already has the value of the socket descriptor to close.
 
 #### Duplicate Socket Descriptors
 
@@ -177,7 +177,7 @@ mov rax, 33
 mov rsi, 2
 syscall
 ```
-Using `dup2()`, to duplicate in the socket descriptor `stdin`, `stdout`, and `stderr`. One call to `dup2()` for each.
+Using `sys_dup2`, to duplicate in the socket descriptor `stdin`, `stdout`, and `stderr`. One call to `sys_dup2` for each.
 Registers get the following values for the parameters:
 -	**RAX** <- 33 : Syscall number
 -	**RDI** <- new file descriptor : Is the client socket id
@@ -339,7 +339,7 @@ SLAE64> echo “\"$(objdump -d 0_BindShell-ExecveStack.o | grep '[0-9a-f]:' |
 
 SLAE64> 
 ```
-#### Shortening Shellcode Length
+#### Shortening More Shellcode Length
 
 But still the shellcode size can be reduced. V1 code is using Relative Addressing for the Password Stuff. This technique, forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode size of 7 bytes. For this reason, the Stack Technique is going to be used for the Password Stuff to replace Relative Addressing. The new code for the Password Stuff section after appliying changes is:
 ```asm
@@ -386,10 +386,10 @@ compare_passwords:
         jne exit_program                        ; Passwords don't match, exit
 
 ```
-Also, the code for the `close()` can be removed, as the socket descriptor is not used anymore once the `accept()` get a connection. 
+Also, the code for the `sys_close` can be removed, as the socket descriptor is not used anymore once the `sys_accept` get a connection. 
 
 #### _UPDATE_ Trick Learned in [Assignment05-1](Assignment05-1)
-Now let's use a trick learned. For the `accept()` call, the value returned for `&client` and `&sockaddr_len` can be NULL. If this is done, then no info is filled in the `sockaddr` struct. This is not a problem, as this data is not used in the code. From this syscall is needed the socked descriptor returned in **RAX**. In `man 2 accept` this is explained. Then, the code for the `accept()` section ends like this:
+Now let's use a trick learned. For the `sys_accept` call, the value returned for `&client` and `&sockaddr_len` can be NULL. If this is done, then no info is filled in the `sockaddr` struct. This is not a problem, as this data is not used in the code. From this syscall is needed the socked descriptor returned in **RAX**. In `man 2 accept` this is explained. Then, the code for the `sys_accept` section ends like this:
 ```asm
 ; client_sock = accept(sock_id, (struct sockaddr *)&client, &sockaddr_len)
         ;       RDI already has the sock_id
