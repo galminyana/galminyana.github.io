@@ -9,17 +9,17 @@ The cypher that's going to be implemented is the [TwoFish Cypher](https://en.wik
 
 The original shellcode to crypt is the generated from [Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment7/Execve-Stack.nasm). This shellcode will be crypted using the code in the [TwoFish_Crypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Crypter.c) file, and the crypted code, will be decrypted and then executed in the [TwoFish_Decrypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Decrypter.c) file.
 
-To implement the TwoFish, the `libmcrypt` library is used. Documentation and examples on how to use `libmcrypt` can be found [here](https://fossies.org/dox/libmcrypt-2.5.8/index.html). In Debian Buster GNU/Linux, is required to install the develop libraries for `mcrypt` to use them.
+To implement the TwoFish, the `libmcrypt` library is used. Documentation and examples on how to use `libmcrypt` can be found [here](https://fossies.org/dox/libmcrypt-2.5.8/index.html). In Debian Buster GNU/Linux, is required to install the develop libraries for `libmcrypt`.
 
 ### Implementation Using `libmcrypt`
 ---
-To work with TwoFish, `mcrypt` requires the following inputs:
+To work with TwoFish, `libmcrypt` requires the following inputs:
 
 - A password that will be used to crypt and decrypt. Password needs to be between 1 and 32 bytes length 
 - A Initialization Vector (IV). The size of this IV will be 16 bytes 
 - The shellcode (a string) to crypt 
 
-The password and IV that's used to encrypt, needs to be the same ones for the decrypt process And the shellcode string will be in hex format.
+The password and IV that's used to encrypt, needs to be the same ones for the decrypt process. And the shellcode string will be in hex format.
 
 Steps to follow for using `libmcrypt` in a C Programm are:
 
@@ -40,7 +40,7 @@ for (int i = 0; i < iv_size; i++) {               // For each byte of the IV
 } 
 ```
 
-3. Initialize the crypt (or decrypt) process for `mcrypt` for the id_crypt with the right password and generated IV 
+3. Initialize the crypt (or decrypt) process for `libmcrypt` for the id_crypt with the right password and generated IV 
 
 ```c
 mcrypt_generic_init(id_crypt, password, iv_size, IV); 
@@ -268,7 +268,7 @@ int main (void)
 
 ### Run Everything
 ---
-Let's try that everything works. Let's pick the Execve-Stack.nasm, generate it's shellcode, then Crypt it, the crypted shellcode will be placed in the Decrypt process and once decrypted, executed.
+Let's try that everything works. Let's pick the [Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment7/Execve-Stack.nasm), generate it's shellcode, then Crypt it. The crypted shellcode will be placed in the Decrypt process, and once decrypted, executed.
 
 #### Generate Execve Stack Shellcode
 
@@ -289,7 +289,7 @@ SLAE64>
 
 #### Crypt the Shellcode
 
-This shellcode is placed in the `code[]` string in the TwoFish_Crypter.c file:
+This shellcode is placed in the `code[]` string in the [TwoFish_Crypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Crypter.c) file:
 
 ```c
 unsigned char code[]= \
@@ -330,7 +330,7 @@ SLAE64>
 <img src="https://galminyana.github.io/img/A07_TwoFish_Crypter_Compile.png" width="75%" height="75%">
 
 #### Decrypt and Execute the Shellcode
-To decrypt, in the file TwoFish_Decrypter.c is needed to:
+To decrypt, in the file [TwoFish_Decrypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Decrypter.c), is needed to:
 - Put the hex value for the IV in the `IV[IV_SIZE]` string
 - Put the hex encrypted shellcode in the `code[]` string
 
@@ -424,11 +424,11 @@ This shellcode is placed in the `shellcode.c` template.
 
 #### Checking VirusTotal with the `TwoFish_Decrypter.c`
 To see if the encryption used is effective, the same is doing using the Crypt Schema used.
-1. The shellcode is placed in the `TwoFish_Crypter.c` file. Compiled and executed:
+1. The shellcode is placed in the [TwoFish_Crypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Crypter.c) file. Compiled and executed:
 
 <img src="https://galminyana.github.io/img/A07_VT_shellcode02.png" width="75%" height="75%">
 
-2. The encrypted shellcode, IV and password are placed in the `TwoFish_Decrypter.c` and compiled
+2. The encrypted shellcode, IV and password are placed in the [TwoFish_Decrypter.c](https://github.com/galminyana/SLAE64/blob/main/Assignment07/TwoFish_Decrypter.c) and compiled
 
 <img src="https://galminyana.github.io/img/A07_VT_shellcode03.png" width="75%" height="75%">
 
