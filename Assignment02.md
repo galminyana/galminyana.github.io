@@ -119,7 +119,7 @@ Now is time to duplicate `stdin`, `stdout` and `stderr` to the socket descriptor
         syscall 
  ```
 #### Password Stuff
-The code for the password stuff is the same as in the Assignment #1. A `“Passwd: “` prompt is shown, and a password max of 8 characters is received from the user input. This input is compared to the hardcoded password, and if equals the program continues, else, the program exits with a segmentation fault.
+The code for the password stuff is the same as in the [Assignment #1](Assignment01). A `“Passwd: “` prompt is shown, and a password max of 8 characters is received from the user input. This input is compared to the hardcoded password, and if equals the program continues, else, the program exits with a segmentation fault.
 ```asm
 write_syscall: 
 
