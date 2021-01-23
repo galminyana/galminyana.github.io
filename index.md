@@ -22,7 +22,7 @@ Below are the links to the posts containing the certification assignments.
 ##### Assignment 05
 - [Payload 01: `linux/x64/exec` Shellcode](Assignment05-1)
 - [Payload 02: `linux/x64/shell_bind_tcp_random_port` Shellcode](Assignment05-2)
-- [Payload 03: `XXXX` Shellcode](Assignment05-3)
+- [Payload 03: `linux/x64/shell_reverse_tcp` Shellcode](Assignment05-3)
 
 ##### Assignment 06
 - [Polymorphic Versions for Choosen Shellcodes](Assignment06)

@@ -192,7 +192,7 @@ All looks good, let's dissect the functionality.
 
 #### Section 1: `sys_socket`
 
-In this section, the `execve` call is to be used. From it's man page can get the function definition:
+In this section, the `socket` call is to be used. From it's man page can get the function definition:
 ```c
 int socket(int domain, int type, int protocol);
 ```
