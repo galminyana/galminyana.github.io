@@ -313,7 +313,7 @@ The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment04) f
 - [Encoder.c](https://github.com/galminyana/SLAE64/blob/main/Assignment04/Encoder.c) : This C file is the implementation of the Encoder Scheme. Prints out a encoded shellcode.
 - [Decode-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment04/Decode-Execve-Stack.nasm) : This is the NULL free code for the Egg Hunter.
 - [Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment4/ReverseShell-ExecveStack_V2.nasm) : This is the code for the shellcode to use in the PoC.
-- [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment04/shellcode.c) : The C template Decode-Execve-Stack.nasm Shellcode, ready to compile and execute
+- [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment04/shellcode.c) : The C template with the [Decode-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment04/Decode-Execve-Stack.nasm), ready to compile and execute
 
 
 ### The End
