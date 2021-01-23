@@ -5,9 +5,9 @@
 ---
 This assignment consists of taking three shellcode samples from shell-storm.org for Linux x86_64 and create polymorphic examples that are no larger than 150% the original size.
 
-The goal of this task is to mimic the same original functionality, but to beat pattern matching techniques that could be used to fingerprint the payload.
+The goal of this task is to mimic the same original functionality, obfuscating the code, in a try to to beat pattern matching techniques that could be used to fingerprint the payload.
 
-Below are the three samples choosen with their original code and the polymorphic version with brief explanations on what has been done.
+Below are the three samples choosen, with their original code and the polymorphic version, with brief explanations on what has been done.
 
 ### Sample 1: `sethostname() & killall 33 bytes shellcode`
 ---
@@ -117,7 +117,7 @@ _start:
         string: db "Rooted !"
 real_start:
 ```
-2. In the original code, RAX needs the value `0xaa`. To acomplish the same result the code is changed adding several instructions to get the same result. With this change, from 2 bytes of size for the original `mov`, size is increased to 10 bytes (2 extra bytes used):
+2. In the original code, **RAX** needs the value `0xaa`. To acomplish the same result the code is changed adding several instructions to get the same result. With this change, from 2 bytes of size for the original `mov`, size is increased to 10 bytes (2 extra bytes used):
 ```asm
 
                                    push 0x46
@@ -127,18 +127,18 @@ mov al, 0xaa       ==>>            cdq
                                    pop rdx
                                    add rax, rdx       ; Here RAX is 0xaa
 ```
-3. In the original code, the '"Rooted !" string is saved in the stack, and RDI gets the address in the stack for this string. As the string has been defined as a variable, now can be accessed using relative addressing. The original code was 15 bytes, and with the change now is 7 bytes (saved 8 bytes here).
+3. In the original code, the `"Rooted !"` string is saved in the stack, and RDI gets the address in the stack for this string. As the string has been defined as a variable, now can be accessed using relative addressing. The original code was 15 bytes, and with the change now is 7 bytes (saved 8 bytes here).
 ```asm
-movabs r8,"Rooted !"
+movabs r8, "Rooted !"
 push r8                    ==>      lea rdi, [rel string]
 mov rdi, rsp
 ```
-4. Replace `mov` by `push;pop` instructions. Here RSI needs the value `0x08`. In the new code, the value is pushed in the stack and then poped in RSI:
+4. Replace `mov` by `push;pop` instructions. Here **RSI** needs the value `0x08`. In the new code, the value is pushed in the stack and then poped in **RSI**:
 ```asm
 mov sil, 0x08              ==>        push 0x08
                                       pop rsi
 ```
-5. Replace the `push;pop` instructions to put `0xff` value in RDI. As RAX has value at this point of `0x3e` we add the value `0xc1` to RDI and add an instruction to sum both values into RDI:
+5. Replace the `push;pop` instructions to put `0xff` value in **RDI**. As **RAX** value at this point is `0x3e`, we add the value `0xc1` to **RDI** and add an instruction to `sum` both values into **RDI**:
 ```asm
 push 0x3e                push 0x3e
 pop rax                  pop rax
@@ -146,7 +146,7 @@ push 0xff    ==>         push 0xc1
 pop rdi                  pop rdi
                          add rdi, rax
 ```
-6. As RSI already has value `0x08` from before, and now requires `0x09` value, just need to increment it. Then the `mov` is replaced by a ìnc`
+6. As **RSI** already has value `0x08` from before, and now requires `0x09` value, just need to increment it. Then the `mov` is replaced by a `inc`
 ```asm
 push 0x09
 pop rsi        ==>       inc rsi
@@ -345,7 +345,7 @@ _start:
         add rax, 59
         syscall
 ```
-To apply polymorphism, first thing that's going to be done is to remove from the stack the command string. It will be stored into `.text` section and accessed by Rel Addressing. For that, a variable is created for each parameter of the command, and a NULL appended to the end of each string. To append the NULLs, RDX is used to avoid NULLs and hence why it's initialized to `0x00` with the `cdq`. To use the `cdq` to make RDX "0", RAX needs to be greater or equal to "0", and that's why the syscall number assignment to RAX has been moved to the start.
+To apply polymorphism, first thing that's going to be done is to remove from the stack the command string. It will be stored into `.text` section and accessed by Rel Addressing. For that, a variable is created for each parameter of the command, and a NULL appended to the end of each string. To append the NULLs, **RDX** is used to avoid NULLs. and hence why it's initialized to `0x00` with the `cdq`. To use the `cdq` to make **RDX** "0", **RAX** needs to be greater or equal to "0", and that's why the syscall number assignment to **RAX** has been moved to the start.
 This changes completelly the code, that does not look like the original:
 ```asm
 global _start
@@ -380,7 +380,7 @@ real_start:
 
         syscall
 ```
-That's not all as the shellcode size can be reduced. Let's avoid the use of so many `lea` to reference, as they use opcodes that increase the size of the shellcode, substracting memory positions to the RBX register to point the parameters memory position. Also, the code is reordered to place the `push`es just after getting memory position for each parameter, making the code look very different from the original one and even shorter with 64 bytes for the 65 bytes from the original:
+That's not all as the shellcode size can be reduced. Let's avoid the use of so many `lea` to reference, as they use opcodes that increase the size of the shellcode, substracting memory positions to the **RBX** register to point the parameters memory position. Also, the code is reordered to place the `push`es just after getting memory position for each parameter, making the code look very different from the original one and even shorter with 64 bytes for the 65 bytes from the original:
 ```asm
 global _start
 section .text
