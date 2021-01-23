@@ -253,7 +253,7 @@ execve_syscall:
 
 #### Putting All Together: The ASM File
 
-The code for this first version of the Bind Shell, can be found in the [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-Execve-Stack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
+> The code for this first version of the Bind Shell, can be found in the [BindShell-Execve-Stack.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-Execve-Stack.nasm) on the [GitHub Repo](https://github.com/galminyana/SLAE64/).
 
 Let's try the code compiling and linking it. Commands are:
 
