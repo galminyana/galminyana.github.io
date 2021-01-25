@@ -464,7 +464,7 @@ The [GitHub Repo](https://github.com/galminyana/SLAE64/tree/main/Assignment01) f
 - [BindShell-ExecveStack_V2.nasm](https://github.com/galminyana/SLAE64/blob/main/Assignment01/BindShell-ExecveStack_V2.nasm) : This is the NULL free code with the shellcode size reduced.
 - [shellcode.c](https://github.com/galminyana/SLAE64/blob/main/Assignment01/shellcode.c) : The C template with the V2 of the shellcode to run and execute
 
-Also, this shellcode has been published at [Exploit-DB](https://www.exploit-db.com/), at [https://www.exploit-db.com/shellcodes/49442](https://www.exploit-db.com/shellcodes/49442)
+Also, this shellcode has been published at [Exploit-DB](https://www.exploit-db.com/), at [https://www.exploit-db.com/shellcodes/49472](https://www.exploit-db.com/shellcodes/49472)
 
 ### The End
 ---
