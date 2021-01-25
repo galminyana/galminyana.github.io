@@ -32,7 +32,10 @@ Below are the links to the posts containing the certification assignments.
 
 ### GitHub Repo
 ---
-All the code for this posts, is hosted in [GitHub](https://github.com/galminyana/SLAE64/).
+All the code for this posts, is hosted in [GitHub](https://github.com/galminyana/SLAE64/). On it can find:
+- The code for the Assignments
+- Some simple Utilities coded in the [Utils](https://github.com/galminyana/SLAE64/tree/main/Utils) folder
+- Some Examples for academic interest in the [Examples](https://github.com/galminyana/SLAE64/tree/main/Examples) folder
 
 ### Licensing
 ---
